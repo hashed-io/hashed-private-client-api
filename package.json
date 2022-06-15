@@ -1,6 +1,6 @@
 {
-  "name": "hashed-private-client-api",
-  "version": "0.0.1",
+  "name": "@smontero/hashed-private-client-api",
+  "version": "0.0.3",
   "description": "Client API for interacting with the hashed private server",
   "main": "src/index.js",
   "scripts": {
