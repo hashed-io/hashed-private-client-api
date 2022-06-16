@@ -116,7 +116,10 @@ const FIND_BY_CID = gql`
     }
   }
 `
-
+/**
+ * Provides the functionality for managing shared private data
+ * from the sharer and sharee perspectives
+ */
 class SharedData extends BaseGQLModel {
   constructor ({ gql, privacy, ipfs, ownedData, user }) {
     super({ gql })
@@ -126,6 +129,36 @@ class SharedData extends BaseGQLModel {
     this._user = user
   }
 
+  /**
+   * @desc Gets a shared data record by id, throws error if the record is not found
+   *
+   * @param {int} id
+   * @return {Object} with the following structure
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   * }
+   * @throws error if the record is not found
+   */
   async getById (id) {
     const sharedData = await this.findById(id)
     if (!sharedData) {
@@ -134,6 +167,35 @@ class SharedData extends BaseGQLModel {
     return sharedData
   }
 
+  /**
+   * @desc Finds a shared data record by id
+   *
+   * @param {int} id
+   * @return {Object|null} with the following structure
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   * }
+   */
   async findById (id) {
     const { shared_data_by_pk: sharedData } = await this.query({
       query: FIND_BY_ID,
@@ -144,6 +206,35 @@ class SharedData extends BaseGQLModel {
     return this._addFlatProps(sharedData)
   }
 
+  /**
+   * @desc Finds a shared data record by cid
+   *
+   * @param {string} cid
+   * @return {Object|null} with the following structure
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   * }
+   */
   async findByCID (cid) {
     const { shared_data: sharedData } = await this.query({
       query: FIND_BY_CID,
@@ -154,6 +245,36 @@ class SharedData extends BaseGQLModel {
     return sharedData.length ? this._addFlatProps(sharedData[0]) : null
   }
 
+  /**
+   * @desc Gets a shared data record by cid, throws error if the record is not found
+   *
+   * @param {string} cid
+   * @return {Object} with the following structure
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   * }
+   * @throws error if the record is not found
+   */
   async getByCID (cid) {
     const sharedData = await this.findByCID(cid)
     if (!sharedData) {
@@ -162,6 +283,11 @@ class SharedData extends BaseGQLModel {
     return sharedData
   }
 
+  /**
+   * @desc Deletes a shared data record by id
+   *
+   * @param {int} id
+   */
   async delete (id) {
     await this.mutate({
       mutation: DELETE,
@@ -171,6 +297,13 @@ class SharedData extends BaseGQLModel {
     })
   }
 
+  /**
+   * @desc Updates metadata related to the shared data record with the specified id
+   *
+   * @param {int} id of the shared data record to update
+   * @param {string} name
+   * @param {string} description
+   */
   async updateMetadata ({
     id,
     name,
@@ -186,6 +319,57 @@ class SharedData extends BaseGQLModel {
     })
   }
 
+  /**
+   * @desc Creates a new shared data record for the specified payload, the data is shared with the
+   * user specified by the toUserId or toUserAddress parameter this method first creates a new
+   * owned data record and then creates the shared data record
+   *
+   * @param {string} [toUserId]
+   * @param {string} [toUserAddress]
+   * @param {string} name
+   * @param {string} description
+   * @param {Object|File} payload to be ciphered and stored
+   * @return {Object} with the following structure containing data related to the
+   * newly created owned data and shared data records
+   * {
+   *  ownedData : {
+   *    "id": 69,
+   *    "name": "name",
+   *    "description": "desc",
+   *    "type": "json",
+   *    "cid": "QmeHEb5TF4zkP2H6Mg5TcrvDs5egPCJgWFBB7YZaLmK7jr",
+   *    "original_cid": "QmeHEb5TF4zkP2H6Mg5TcrvDs5egPCJgWFBB7YZaLmK7jr",
+   *    "iv": "d232f60b340d7235beafed405b08b811",
+   *    "mac": "6da9ce5375af9cdadf762e0910674c8b10b0c2c87500ce5c36fe0d2c8ea9fa5d",
+   *    "started_at": "2022-06-14T13:43:15.108+00:00",
+   *    "ended_at": null,
+   *    "is_deleted": false
+   *  },
+   *  sharedData: {
+   *    "id": 69,
+   *    "name": "name1",
+   *    "description": "desc1",
+   *    "from_user": {
+   *      "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *      "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *      "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *    },
+   *    "to_user": {
+   *      "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *      "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *      "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *    },
+   *    "original_owned_data": {
+   *      "id": 184,
+   *      "type": "json"
+   *    },
+   *    "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *    "iv": "899398d07303510df18c58a804acf5b0",
+   *    "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *    "shared_at": "2022-06-15T00:11:56.611+00:00"
+   *  }
+   * }
+   */
   async shareNew ({
     toUserId = null,
     toUserAddress = null,
@@ -218,6 +402,39 @@ class SharedData extends BaseGQLModel {
     }
   }
 
+  /**
+   * @desc Creates a new shared data record for the specified existing owned data record, the data is shared with the
+   * user specified by the toUserId or toUserAddress parameter
+   *
+   * @param {string} [toUserId]
+   * @param {string} [toUserAddress]
+   * @param {int} originalOwnedDataId id of the owned data record describing the payload to share
+   * @return {Object} with the following structure containing data related to the
+   * newly created shared data record
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   * }
+   */
   async shareExisting ({
     toUserId = null,
     toUserAddress = null,
@@ -241,6 +458,124 @@ class SharedData extends BaseGQLModel {
       forPublicKey,
       originalOwnedDataId,
       payload
+    })
+  }
+
+  /**
+   * @desc Returns the deciphered payload specfied by the cid
+   *
+   * @param {string} cid related to the shared data record
+   * @return {Object} representing the shared data record with the following structure
+   * containing the deciphered payload
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   *   "payload": { prop1: 1, prop2:"Hi"}
+   * }
+   * @throws error if the record is not found or if the logged in user is not the sharer/sharee of the data
+   */
+  async viewByCID ({
+    cid
+  }) {
+    return this._view(await this.getByCID(cid))
+  }
+
+  /**
+   * @desc Returns the deciphered payload specfied by the shared data id
+   *
+   * @param {int} cid related to the shared data record
+   * @return {Object} representing the shared data record with the following structure
+   * containing the deciphered payload
+   * {
+   *   "id": 69,
+   *   "name": "name1",
+   *   "description": "desc1",
+   *   "from_user": {
+   *     "id": "d76d2baf-a9a9-4980-929c-1d3d467810c7",
+   *     "address": "5FWtfhKTuGKm9yWqzApwTfiUL4UPWukJzEcCTGYDiYHsdKaG",
+   *     "public_key": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *   },
+   *   "to_user": {
+   *     "id": "a917e2b7-596e-4bc0-be79-9828b0b3ea78",
+   *     "address": "5FSuxe2q7qCYKie8yqmM56U4ovD1YtBb3DoPzGKjwZ98vxua",
+   *     "public_key": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+   *   },
+   *   "original_owned_data": {
+   *     "id": 184,
+   *     "type": "json"
+   *   },
+   *   "cid": "QmPn3obcymCxEfKhSUVhvkLsqPytH16ghcCsthqz9A5YA9",
+   *   "iv": "899398d07303510df18c58a804acf5b0",
+   *   "mac": "cc82141ac5686c15ce79fa4d3a57eeee1d127db6c1e2302d312c2bc6c90a0c81",
+   *   "shared_at": "2022-06-15T00:11:56.611+00:00"
+   *   "payload": { prop1: 1, prop2:"Hi"}
+   * }
+   * @throws error if the record is not found or if the logged in user is not the sharer/sharee of the data
+   */
+  async viewByID ({
+    id
+  }) {
+    return this._view(await this.getById(id))
+  }
+
+  /**
+   * @desc Returns the deciphered payload described by the specified parameters, this method
+   * is intended to be used when the client has already retrieved the shared data record details
+   * as it does not query the backend again
+   *
+   * @param {string} cid of the ciphered payload
+   * @param {string} iv initialization vector
+   * @param {string} mac message authentication code
+   * @param {string} type of the payload
+   * @param {string} toPublicKey the public key of the user with whom the data was shared
+   * @param {string} fromPublicKey the public key of the user who shared the data
+   * @return {Object} representing the owned data record with the following structure
+   * containing the deciphered payload
+   * {
+   *  "type": "json",
+   *  "cid": "QmeHEb5TF4zkP2H6Mg5TcrvDs5egPCJgWFBB7YZaLmK7jr",
+   *  "iv": "d232f60b340d7235beafed405b08b811",
+   *  "mac": "6da9ce5375af9cdadf762e0910674c8b10b0c2c87500ce5c36fe0d2c8ea9fa5d",
+   *  "toPublicKey": "PUB_K1_6m2Gq41FwDoeY1z5SNssjx8wYgLc4UbAKtvNDrdDhVCx8CU2B8"
+  *   "fromPublicKey": "PUB_K1_7afYoQhA8aSMLGtGiKiBqrwfVAGNoxbcPcredSvZ3rkny9QoyG"
+   *  "payload": { prop1: 1, prop2:"Hi"}
+   * }
+   * @throws error if the record is not found or if the logged in user is not the owner of the data
+   */
+  async view ({
+    cid,
+    iv,
+    mac,
+    type,
+    toPublicKey,
+    fromPublicKey
+  }) {
+    return this._view({
+      cid,
+      iv,
+      mac,
+      type,
+      toPublicKey,
+      fromPublicKey
     })
   }
 
@@ -283,36 +618,6 @@ class SharedData extends BaseGQLModel {
       }
     })
     return sharedData
-  }
-
-  async viewByCID ({
-    cid
-  }) {
-    return this._view(await this.getByCID(cid))
-  }
-
-  async viewByID ({
-    id
-  }) {
-    return this._view(await this.getById(id))
-  }
-
-  async view ({
-    cid,
-    iv,
-    mac,
-    type,
-    toPublicKey,
-    fromPublicKey
-  }) {
-    return this._view({
-      cid,
-      iv,
-      mac,
-      type,
-      toPublicKey,
-      fromPublicKey
-    })
   }
 
   async _view (sharedData) {
