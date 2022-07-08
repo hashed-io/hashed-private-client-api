@@ -1,6 +1,6 @@
 {
   "name": "@smontero/hashed-private-client-api",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Client API for interacting with the hashed private server",
   "main": "src/index.js",
   "scripts": {
@@ -30,6 +30,7 @@
     "eslint-plugin-promise": "^6.0.0",
     "html-webpack-plugin": "^5.3.2",
     "jest": "^28.1.1",
+    "jest-localstorage-mock": "^2.4.21",
     "node-polyfill-webpack-plugin": "^1.0.4",
     "webpack": "^5.45.1",
     "webpack-cli": "^4.7.2",
@@ -44,8 +45,13 @@
     "graphql": "^16.5.0",
     "ipfs-http-client": "^55.0.0",
     "it-all": "^1.0.6",
+    "jwt-decode": "^3.1.2",
     "mime-types": "^2.1.35",
     "sha.js": "^2.4.11",
     "uint8arrays": "^3.0.0"
+  },
+  "jest": {
+    "resetMocks": false,
+    "setupFiles": ["jest-localstorage-mock"]
   }
 }

@@ -630,7 +630,7 @@ class SharedData extends BaseGQLModel {
       fromPublicKey
     } = sharedData
     const cipheredPayload = await this._ipfs.cat(cid)
-    const payload = this._privacy.decipher({
+    const payload = await this._privacy.decipher({
       cipheredPayload,
       iv,
       mac,

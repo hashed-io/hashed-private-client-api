@@ -1,8 +1,9 @@
 const {
   gql
 } = require('@apollo/client/core')
-
+const jwtDecode = require('jwt-decode')
 const BaseGQLModel = require('./BaseGQLModel')
+const { LocalStorageKey } = require('../const')
 const { Crypto } = require('../service')
 
 const GENERATE_LOGIN_CHALLENGE = gql`
@@ -63,10 +64,7 @@ class Auth extends BaseGQLModel {
         signature
       }
     })
-
-    this._context = {
-      token
-    }
+    localStorage.setItem(LocalStorageKey.JWT, token)
     if (!user.publicKey) {
       const {
         publicKey,
@@ -84,11 +82,12 @@ class Auth extends BaseGQLModel {
 
   async logout () {
     this._context = {}
+    localStorage.removeItem(LocalStorageKey.JWT)
     await this._gql.clearStore()
   }
 
   isLoggedIn () {
-    return !!this._context.token
+    return !!this._getToken()
   }
 
   assertIsLoggedIn () {
@@ -99,11 +98,26 @@ class Auth extends BaseGQLModel {
 
   getToken () {
     this.assertIsLoggedIn()
+    return this._getToken()
+  }
+
+  _getToken () {
+    if (!this._context.token) {
+      this._context.token = localStorage.getItem(LocalStorageKey.JWT)
+    }
     return this._context.token
   }
 
-  getUserInfo () {
+  _getUserId () {
+    const { sub } = jwtDecode(this.getToken())
+    return sub
+  }
+
+  async getUserInfo () {
     this.assertIsLoggedIn()
+    if (!this._context.user) {
+      this._context.user = await this._user.get({ id: this._getUserId() })
+    }
     return this._context.user
   }
 }

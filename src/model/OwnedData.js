@@ -439,7 +439,7 @@ class OwnedData extends BaseGQLModel {
       type
     } = ownedData
     const cipheredPayload = await this._ipfs.cat(cid)
-    const payload = this._privacy.decipher({
+    const payload = await this._privacy.decipher({
       cipheredPayload,
       iv,
       mac,

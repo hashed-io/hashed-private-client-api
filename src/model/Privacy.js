@@ -7,7 +7,7 @@ class Privacy {
   }
 
   async cipher ({ payload, forPublicKey = null }) {
-    const { public_key: publicKey, private_info: { security_data: privateKey } } = this._auth.getUserInfo()
+    const { public_key: publicKey, private_info: { security_data: privateKey } } = await this._auth.getUserInfo()
     forPublicKey = forPublicKey || publicKey
 
     let type = null
@@ -29,7 +29,7 @@ class Privacy {
     }
   }
 
-  decipher ({
+  async decipher ({
     cipheredPayload,
     iv,
     mac,
@@ -37,7 +37,7 @@ class Privacy {
     toPublicKey = null,
     fromPublicKey = null
   }) {
-    const { public_key: userPublicKey, private_info: { security_data: privateKey } } = this._auth.getUserInfo()
+    const { public_key: userPublicKey, private_info: { security_data: privateKey } } = await this._auth.getUserInfo()
     let publicKey = userPublicKey
     if (toPublicKey && fromPublicKey) {
       publicKey = toPublicKey === userPublicKey ? fromPublicKey : toPublicKey

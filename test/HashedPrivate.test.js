@@ -19,14 +19,7 @@ beforeAll(async () => {
   keyPair1 = createKeyPair(MNEMONIC1)
   keyPair2 = createKeyPair(MNEMONIC2)
   keyPairNewUser = createKeyPair(mnemonicGenerate())
-  hp = new HashedPrivate({
-    ipfsURL: 'https://ipfs.infura.io:5001',
-    privateURI: 'http://localhost:8080/v1/graphql',
-    signFn: (address, message) => {
-      const keyPair = keyring.getPair(address)
-      return u8aToHex(keyPair.sign(stringToU8a(message)))
-    }
-  })
+  hp = newHashedPrivateInstance()
 })
 
 beforeEach(async () => {
@@ -69,6 +62,17 @@ describe('HashedPrivate Integration Tests', () => {
     expect(hp.isLoggedIn()).toBe(false)
     await hp.login(keyPairNewUser.address)
     expect(hp.isLoggedIn()).toBe(true)
+  })
+
+  test('Test session persistence', async () => {
+    expect(hp.isLoggedIn()).toBe(false)
+    await hp.login(keyPairNewUser.address)
+    expect(hp.isLoggedIn()).toBe(true)
+    const newHP = newHashedPrivateInstance()
+    expect(newHP.isLoggedIn()).toBe(true)
+    await hp.logout()
+    const newHP2 = newHashedPrivateInstance()
+    expect(newHP2.isLoggedIn()).toBe(false)
   })
 
   test('Cipher and view owned data', async () => {
@@ -341,6 +345,16 @@ describe('HashedPrivate Integration Tests', () => {
   // })
 })
 
+function newHashedPrivateInstance () {
+  return new HashedPrivate({
+    ipfsURL: 'https://ipfs.infura.io:5001',
+    privateURI: 'http://localhost:8080/v1/graphql',
+    signFn: (address, message) => {
+      const keyPair = keyring.getPair(address)
+      return u8aToHex(keyPair.sign(stringToU8a(message)))
+    }
+  })
+}
 async function setupSharedData (num) {
   await login(keyPair1.address)
   await logout()
