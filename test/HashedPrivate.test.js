@@ -1,4 +1,5 @@
-const { stringToU8a, u8aToHex } = require('@polkadot/util')
+
+jest.setTimeout(200000)
 const { Keyring } = require('@polkadot/keyring')
 const { mnemonicGenerate } = require('@polkadot/util-crypto')
 require('cross-fetch/polyfill')
@@ -351,7 +352,7 @@ function newHashedPrivateInstance () {
     privateURI: 'http://localhost:8080/v1/graphql',
     signFn: (address, message) => {
       const keyPair = keyring.getPair(address)
-      return u8aToHex(keyPair.sign(stringToU8a(message)))
+      return keyPair.sign(message)
     }
   })
 }

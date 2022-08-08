@@ -56,7 +56,8 @@ class Auth extends BaseGQLModel {
         address
       }
     })
-    const signature = await this._signFn(address, message)
+    let signature = await this._signFn(address, message)
+    signature = `0x${Buffer.from(signature).toString('hex')}`
     let { login: { token, user } } = await this.mutate({
       mutation: LOGIN,
       variables: {
