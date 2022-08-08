@@ -16,13 +16,13 @@ class IPFS {
    * @param {String or Uint8Array} data to store
    * @returns {String} cid of the stored data
    */
-  async add (data, retries = 3) {
+  async add (data, retries = 4) {
     try {
       const { path } = await this.client.add(data)
       return path
     } catch (error) {
       if (retries > 0) {
-        await sleep(SLEEP_TIME * (Math.max(4 - retries, 1)))
+        await sleep(SLEEP_TIME * (Math.max(5 - retries, 1)))
         return this.add(data, retries - 1)
       }
       throw error
