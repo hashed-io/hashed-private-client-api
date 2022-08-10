@@ -349,6 +349,7 @@ describe('HashedPrivate Integration Tests', () => {
 function newHashedPrivateInstance () {
   return new HashedPrivate({
     ipfsURL: 'https://ipfs.infura.io:5001',
+    ipfsAuthHeader: `Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`,
     privateURI: 'http://localhost:8080/v1/graphql',
     signFn: (address, message) => {
       const keyPair = keyring.getPair(address)

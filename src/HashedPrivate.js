@@ -11,6 +11,7 @@ class HashedPrivate {
    *
    * @param {Object} opts
    * @param {String} opts.ipfsURL the ipfs endpoint to use
+   * @param {String} [opts.ipfsAuthHeader] the ipfs authentication header if required
    * @param {String} opts.privateURI the hashed private server endpoint
    * @param {function} opts.signFn async function that receives an address and message as parameters and returns the signed message
    * @return {Object} instance of hashed private
@@ -19,11 +20,13 @@ class HashedPrivate {
     this._opts = opts
     const {
       ipfsURL,
+      ipfsAuthHeader,
       privateURI,
       signFn
     } = opts
     this._ipfs = new IPFS({
-      url: ipfsURL
+      url: ipfsURL,
+      authHeader: ipfsAuthHeader
     })
     this._auth = new Auth()
     const gql = new GQL({

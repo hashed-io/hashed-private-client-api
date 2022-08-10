@@ -7,9 +7,18 @@ const { create } = require('ipfs-http-client')
 const SLEEP_TIME = 5000
 class IPFS {
   constructor ({
-    url
+    url,
+    authHeader = null
   }) {
-    this.client = create(new URL(url))
+    const opts = {
+      url: new URL(url)
+    }
+    if (authHeader) {
+      opts.headers = {
+        authorization: authHeader
+      }
+    }
+    this.client = create(opts)
   }
 
   /**
