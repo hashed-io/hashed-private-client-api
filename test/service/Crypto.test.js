@@ -1,3 +1,4 @@
+require('cross-fetch/polyfill')
 const { Crypto } = require('../../src/service')
 
 describe('cipher/decipher', () => {
