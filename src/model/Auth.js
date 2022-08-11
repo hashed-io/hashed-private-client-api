@@ -57,7 +57,9 @@ class Auth extends BaseGQLModel {
       }
     })
     let signature = await this._signFn(address, message)
-    signature = `0x${Buffer.from(signature).toString('hex')}`
+    if (!isString(signature)) {
+      signature = `0x${Buffer.from(signature).toString('hex')}`
+    }
     let { login: { token, user } } = await this.mutate({
       mutation: LOGIN,
       variables: {
@@ -124,3 +126,7 @@ class Auth extends BaseGQLModel {
 }
 
 module.exports = Auth
+
+function isString (val) {
+  return Object.prototype.toString.call(val) === '[object String]'
+}
