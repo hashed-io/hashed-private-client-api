@@ -2,11 +2,11 @@ const {
   gql
 } = require('@apollo/client/core')
 
-const BaseGQLModel = require('./BaseGQLModel')
+const Actor = require('./Actor')
 
 const UPDATE_SECURITY_DATA = gql`
   mutation update_user_security_data($id: uuid!, $publicKey: String!, $securityData: String!){
-    update_user(
+    update_actor(
       _set:{
         public_key: $publicKey,
         security_data: $securityData
@@ -25,22 +25,9 @@ const UPDATE_SECURITY_DATA = gql`
   }
 `
 
-const FIND_BY_ID = gql`
-  query find_user_by_id($id: uuid!){
-    user_by_pk(id:$id){
-      id
-      address
-      public_key
-      private_info{
-        security_data
-      }
-    }
-  }
-`
-
 const FIND_BY_ADDRESS = gql`
   query find_user_by_address($address: String!){
-    user(where:{
+    actor(where:{
       address:{
         _eq: $address
       }
@@ -52,11 +39,7 @@ const FIND_BY_ADDRESS = gql`
   }
 `
 
-class User extends BaseGQLModel {
-  constructor ({ gql }) {
-    super({ gql })
-  }
-
+class User extends Actor {
   async find ({
     id = null,
     address = null
@@ -81,24 +64,6 @@ class User extends BaseGQLModel {
     } else {
       throw new Error('A user id or address has to be provided to the User find method')
     }
-  }
-
-  async findById (id) {
-    const { user_by_pk: user } = await this.query({
-      query: FIND_BY_ID,
-      variables: {
-        id
-      }
-    })
-    return user
-  }
-
-  async getById (id) {
-    const user = await this.findById(id)
-    if (!user) {
-      throw new Error(`User with id: ${id} not found`)
-    }
-    return user
   }
 
   async findByAddress (address) {
@@ -128,7 +93,7 @@ class User extends BaseGQLModel {
         securityData
       }
     })
-    return this.getById(id)
+    return this.getFullById(id)
   }
 }
 

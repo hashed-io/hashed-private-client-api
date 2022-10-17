@@ -3,8 +3,9 @@ const {
 } = require('@apollo/client/core')
 const jwtDecode = require('jwt-decode')
 const BaseGQLModel = require('./BaseGQLModel')
+const Cipher = require('./Cipher')
 const { LocalStorageKey } = require('../const')
-const { Crypto } = require('../service')
+const { Crypto } = require('@smontero/hashed-crypto')
 
 const GENERATE_LOGIN_CHALLENGE = gql`
   mutation generate_login_challenge($address: String!){
@@ -39,11 +40,13 @@ class Auth extends BaseGQLModel {
     super({ gql: null })
   }
 
-  init ({ gql, user, signFn }) {
+  init ({ gql, user, signFn, crypto }) {
+    this._userInfo = null
     this._gql = gql
     this._user = user
     this._signFn = signFn
-    this._context = {}
+    this._crypto = crypto
+    this._cipher = null
   }
 
   async login (address) {
@@ -72,21 +75,33 @@ class Auth extends BaseGQLModel {
       const {
         publicKey,
         privateKey: securityData
-      } = Crypto.generateKeyPair()
+      } = this._crypto.generateKeyPair()
       user = await this._user.updateSecurityData({
         id: user.id,
         publicKey,
         securityData
       })
     }
-    this._context.user = user
-    return user
+    this._setUserInfo(user)
+    this._createCipher(user)
+  }
+
+  async userInfo () {
+    this._assureIsInitialized()
+    return this._userInfo
+  }
+
+  async cipher () {
+    this._assureIsInitialized()
+    return this._cipher
   }
 
   async logout () {
-    this._context = {}
+    this._userInfo = null
+    this._cipher = null
     localStorage.removeItem(LocalStorageKey.JWT)
     await this._gql.clearStore()
+    this.emit('logout')
   }
 
   isLoggedIn () {
@@ -116,12 +131,32 @@ class Auth extends BaseGQLModel {
     return sub
   }
 
-  async getUserInfo () {
+  async _assureIsInitialized () {
     this.assertIsLoggedIn()
-    if (!this._context.user) {
-      this._context.user = await this._user.get({ id: this._getUserId() })
+    if (!this._userInfo) {
+      const user = await this._user.getFullById(this._getUserId())
+      this._setUserInfo(user)
+      this._createCipher(user)
     }
-    return this._context.user
+  }
+
+  _setUserInfo (user) {
+    const {
+      id,
+      address
+    } = user
+    this._userInfo = {
+      id,
+      address
+    }
+  }
+
+  _createCipher (user) {
+    this._cipher = new Cipher({
+      auth: this,
+      actor: this._user,
+      defaultActor: user
+    })
   }
 }
 

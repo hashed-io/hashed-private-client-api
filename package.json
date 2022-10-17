@@ -40,10 +40,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.6.8",
+    "@smontero/hashed-crypto": "^0.0.8",
     "await-sleep": "^0.0.1",
-    "crypto": "^1.0.1",
-    "elliptic": "^6.5.4",
-    "eosjs": "^22.1.0",
     "graphql": "^16.5.0",
     "ipfs-http-client": "^55.0.0",
     "it-all": "^1.0.6",

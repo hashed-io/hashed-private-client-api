@@ -1,5 +1,8 @@
-class BaseGQLModel {
+const { EventEmitter } = require('events')
+
+class BaseGQLModel extends EventEmitter {
   constructor ({ gql }) {
+    super()
     this._gql = gql
   }
 
