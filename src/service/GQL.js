@@ -22,8 +22,17 @@ class GQL {
     return this.client.query(opts)
   }
 
-  async mutate (opts) {
-    return this.client.mutate(opts)
+  async mutate (opts, config) {
+    config = config || {}
+    const response = await this.client.mutate(opts)
+    const { evict } = config
+    if (evict) {
+      const cache = this.client.cache
+      console.log('evicting: ', evict)
+      cache.evict(evict)
+      cache.gc()
+    }
+    return response
   }
 
   async clearStore () {

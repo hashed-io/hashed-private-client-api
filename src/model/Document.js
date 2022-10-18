@@ -68,7 +68,7 @@ const FIND_BY_CID = gql`
         address
         publicKey: public_key
       }
-      to_actor{
+      toActor: to_actor{
         name
         address
         publicKey: public_key
@@ -120,7 +120,7 @@ class Document extends BaseGQLModel {
         cid
       }
     })
-    return doc.length ? doc[0] : null
+    return doc
   }
 
   /**
@@ -164,12 +164,16 @@ class Document extends BaseGQLModel {
    * @param {String} cid
    */
   async delete (cid) {
-    await this.mutate({
+    const { delete_document_by_pk: doc } = await this.mutate({
       mutation: DELETE,
       variables: {
         cid
       }
-    })
+    }, { evict: { cid } })
+    if (!doc) {
+      throw new Error(`User does not have permission to delete document with cid: ${cid}`)
+    }
+    return doc
   }
 
   /**
@@ -184,7 +188,7 @@ class Document extends BaseGQLModel {
     name,
     description
   }) {
-    await this.mutate({
+    const { update_document_by_pk: doc } = await this.mutate({
       mutation: UPDATE_METADATA,
       variables: {
         cid,
@@ -192,6 +196,10 @@ class Document extends BaseGQLModel {
         description
       }
     })
+    if (!doc) {
+      throw new Error(`User does not have permission to update metadata of document with cid: ${cid}`)
+    }
+    return doc
   }
 
   /**
@@ -225,11 +233,14 @@ class Document extends BaseGQLModel {
     payload,
     actorId = null
   }) {
+    console.log('Ciphering payload...')
     const {
       ownerActorId,
       cipheredPayload
-    } = await this._cipher({ payload, actorId })
+    } = await this._cipher.cipher({ payload, actorId })
+    console.log('Storing in ipfs...', cipheredPayload)
     const cid = await this._ipfs.add(cipheredPayload)
+    console.log('Creating doc  ipfs...')
     return this._createDoc({
       name,
       description,
@@ -280,9 +291,9 @@ class Document extends BaseGQLModel {
   }) {
     const {
       id: forActorId,
-      public_key: forPublicKey
+      publicKey: forPublicKey
     } = await this._actor.get({
-      id: toActorId,
+      actorId: toActorId,
       address: toActorAddress
     })
 
@@ -347,6 +358,7 @@ class Document extends BaseGQLModel {
         publicKey: ownerPublicKey
       }
     } = document
+    console.log('Document: ', document)
     const fullCipheredPayload = await this._ipfs.cat(cid)
     let payload = null
     if (!toActorId) {

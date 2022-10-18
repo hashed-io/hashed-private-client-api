@@ -1,25 +1,21 @@
 
 jest.setTimeout(200000)
-const { Keyring } = require('@polkadot/keyring')
-const { mnemonicGenerate } = require('@polkadot/util-crypto')
 require('cross-fetch/polyfill')
 const { HashedPrivate } = require('../src')
+const { GroupRole } = require('../src/const')
+const Util = require('./support/Util')
 
 global.File = class {}
 
-const MNEMONIC1 = 'betray enhance climb rain cement trim better brick riot moment thought deny'
-const MNEMONIC2 = 'crystal name pizza edit thumb save all fossil comfort fit rule horse'
-
+const util = new Util()
 let keyPair1 = null
 let keyPair2 = null
 let keyPairNewUser = null
-let keyring = null
 let hp = null
 beforeAll(async () => {
-  keyring = new Keyring()
-  keyPair1 = createKeyPair(MNEMONIC1)
-  keyPair2 = createKeyPair(MNEMONIC2)
-  keyPairNewUser = createKeyPair(mnemonicGenerate())
+  keyPair1 = util.createKeyPair(Util.MNEMONIC1)
+  keyPair2 = util.createKeyPair(Util.MNEMONIC2)
+  keyPairNewUser = util.createKeyPair()
   hp = newHashedPrivateInstance()
 })
 
@@ -27,33 +23,159 @@ beforeEach(async () => {
   await logout()
 })
 
+describe('Group tests', () => {
+  test('Create Group and manage members', async () => {
+    const kpUser1 = await addUser()
+    const kpUser2 = await addUser()
+    await hp.login(keyPair1.address)
+    const expectedGroup = getGroup()
+    const groupId = await hp.group().createGroup(expectedGroup)
+    console.log('GroupId: ', groupId)
+    let group = await hp.group().findById(groupId)
+    expectedGroup.users = [{
+      address: keyPair1.address,
+      roleId: GroupRole.Admin
+    }]
+    assertGroup(group, expectedGroup)
+
+    await hp.group().upsertMember({
+      userAddress: kpUser1.address,
+      groupId,
+      roleId: GroupRole.Member
+    })
+    group = await hp.group().findById(groupId)
+    expectedGroup.users.push({
+      address: kpUser1.address,
+      roleId: GroupRole.Member
+    })
+    assertGroup(group, expectedGroup)
+
+    await hp.group().upsertMember({
+      userAddress: kpUser2.address,
+      groupId,
+      roleId: GroupRole.Admin
+    })
+    group = await hp.group().findById(groupId)
+    expectedGroup.users.push({
+      address: kpUser2.address,
+      roleId: GroupRole.Admin
+    })
+    assertGroup(group, expectedGroup)
+
+    await hp.group().upsertMember({
+      userAddress: kpUser1.address,
+      groupId,
+      roleId: GroupRole.Admin
+    })
+    group = await hp.group().findById(groupId)
+    expectedGroup.users[1].roleId = GroupRole.Admin
+    assertGroup(group, expectedGroup)
+
+    await hp.group().deleteMember({
+      userAddress: kpUser2.address,
+      groupId
+    })
+    group = await hp.group().findById(groupId)
+    expectedGroup.users = expectedGroup.users.slice(0, 2)
+    assertGroup(group, expectedGroup)
+
+    await hp.login(kpUser1.address)
+
+    await hp.group().deleteMember({
+      userAddress: keyPair1.address,
+      groupId
+    })
+    group = await hp.group().findById(groupId)
+    expectedGroup.users = expectedGroup.users.slice(1, 2)
+    assertGroup(group, expectedGroup)
+  })
+
+  test('Non Group admin should not be able to manage group', async () => {
+    expect.assertions(5)
+    const {
+      member1,
+      admin1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    console.log('groupId: ', groupId, 'member1: ', member1.address)
+    const nonMember1 = await addUser()
+    const nonMember2 = await addUser()
+    try {
+      await hp.group().upsertMember({
+        userAddress: nonMember1.address,
+        groupId,
+        roleId: GroupRole.Member
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to manage members on group')
+    }
+
+    try {
+      await hp.group().deleteMember({
+        userAddress: member1.address,
+        groupId
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to delete members from group')
+    }
+    await hp.login(member1.address)
+    try {
+      await hp.group().upsertMember({
+        userAddress: nonMember2.address,
+        groupId,
+        roleId: GroupRole.Member
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to manage members on group')
+    }
+
+    try {
+      await hp.group().deleteMember({
+        userAddress: admin1.address,
+        groupId
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to delete members from group')
+    }
+  })
+})
+
 describe('HashedPrivate Integration Tests', () => {
-  test('Should not be able to work with owned data and shared data if not logged in', async () => {
-    expect.assertions(8)
+  test('Should not be able to work with document object if not logged in', async () => {
+    expect.assertions(9)
     expect(hp.isLoggedIn()).toBe(false)
     try {
-      await hp.ownedData().upsert(getBaseData(1))
+      await hp.document().store(getBaseData(1))
     } catch (err) {
       expect(err.message).toContain('No user is logged in')
     }
 
     try {
-      await hp.sharedData().viewByID({ id: 1 })
+      await hp.document().viewByCID({ cid: '34asdaasd' })
     } catch (err) {
       expect(err.message).toContain('No user is logged in')
     }
     await hp.login(keyPair1.address)
     expect(hp.isLoggedIn()).toBe(true)
+    const document = hp.document()
     await hp.logout()
     expect(hp.isLoggedIn()).toBe(false)
     try {
-      await hp.ownedData().upsert(getBaseData(1))
+      await hp.document().store(getBaseData(1))
     } catch (err) {
       expect(err.message).toContain('No user is logged in')
     }
 
     try {
-      await hp.sharedData().viewByID({ id: 1 })
+      await document.store(getBaseData(1))
+    } catch (err) {
+      expect(err.message).toContain('No user is logged in')
+    }
+
+    try {
+      await hp.document().viewByCID({ cid: '34asdaasd' })
     } catch (err) {
       expect(err.message).toContain('No user is logged in')
     }
@@ -76,316 +198,340 @@ describe('HashedPrivate Integration Tests', () => {
     expect(newHP2.isLoggedIn()).toBe(false)
   })
 
-  test('Cipher and view owned data', async () => {
+  test('Cipher and view own document', async () => {
     await login(keyPair1.address)
-    const expectedOwnedData = getBaseData(1)
-    let ownedData = await hp.ownedData().upsert(expectedOwnedData)
-    assertOwnedData(ownedData, expectedOwnedData)
-    const { payload } = await hp.ownedData().view(ownedData)
-    expect(payload).toEqual(expectedOwnedData.payload)
-    ownedData = await hp.ownedData().viewByID(ownedData)
-    assertOwnedData(ownedData, expectedOwnedData)
-    expect(ownedData.payload).toEqual(expectedOwnedData.payload)
-    ownedData = await hp.ownedData().viewByCID(ownedData)
-    assertOwnedData(ownedData, expectedOwnedData)
-    expect(ownedData.payload).toEqual(expectedOwnedData.payload)
+    const expectedDocument = getBaseData(1)
+    expectedDocument.ownerActorAddress = keyPair1.address
+    let document = await hp.document().store(expectedDocument)
+    assertDocument(document, expectedDocument)
+    document = await hp.document().viewByCID(document)
+    assertDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
+  })
+
+  test('Group can cipher and view own document', async () => {
+    const {
+      member1,
+      admin1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.login(admin1.address)
+    const expectedDocument = getBaseData(1)
+    expectedDocument.ownerActorId = groupId
+    let document = await hp.document().store({
+      ...expectedDocument,
+      actorId: groupId
+    })
+    assertDocument(document, expectedDocument)
+    document = await hp.document().viewByCID(document)
+    assertDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
+    await hp.login(member1.address)
+    document = await hp.document().viewByCID(document)
+    assertDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
   })
 
   test('Update owned data metadata', async () => {
     let {
-      ownedData,
-      expectedOwnedData
-    } = await setupOwnedData(1)
-    const id = ownedData.id
+      document,
+      expectedDocument
+    } = await setupOwnDocument(1)
+    const cid = document.cid
     const name = 'name 2'
     const description = 'desc 2'
-    await hp.ownedData().updateMetadata({
-      id,
+    await hp.document().updateMetadata({
+      cid,
       name,
       description
     })
-    ownedData = await hp.ownedData().getById({
-      id: ownedData.id
-    })
-    expectedOwnedData.name = name
-    expectedOwnedData.description = description
-    assertOwnedData(ownedData, expectedOwnedData)
-    expect(ownedData.id).toBe(id)
+    document = await hp.document().getByCID(cid)
+    expectedDocument.name = name
+    expectedDocument.description = description
+    assertDocument(document, expectedDocument)
+    expect(document.cid).toBe(cid)
   })
 
-  test('Should fail for non owner trying to view owned data', async () => {
-    expect.assertions(18)
+  test('Group can update owned data metadata', async () => {
     const {
-      ownedData
-    } = await setupOwnedData(1)
+      admin1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    let {
+      document,
+      expectedDocument
+    } = await setupOwnDocument(1, admin1, groupId)
+    const cid = document.cid
+    const name = 'name 2'
+    const description = 'desc 2'
+    await hp.document().updateMetadata({
+      cid,
+      name,
+      description
+    })
+    document = await hp.document().getByCID(cid)
+    expectedDocument.name = name
+    expectedDocument.description = description
+    assertDocument(document, expectedDocument)
+    expect(document.cid).toBe(cid)
+  })
+
+  test('Should fail for non owner trying to view document', async () => {
+    expect.assertions(13)
+    const {
+      document
+    } = await setupOwnDocument(1)
     await logout()
     await login(keyPairNewUser.address)
 
     try {
-      await hp.ownedData().view(ownedData)
+      await hp.document().viewByCID(document)
     } catch (err) {
-      expect(err.message).toContain('Invalid MAC')
+      expect(err.message).toContain('User does not have access to document with cid')
     }
   })
 
-  test('Upsert new owned data version', async () => {
-    let {
-      ownedData: ownedDataV1,
-      expectedOwnedData
-    } = await setupOwnedData(1)
-    expectedOwnedData.id = ownedDataV1.id
-    expectedOwnedData.payload.prop1 = 5
-    const ownedDataV2 = await hp.ownedData().upsert(expectedOwnedData)
-    assertOwnedData(ownedDataV2, expectedOwnedData)
-    expect(ownedDataV1.id).not.toBe(ownedDataV2.id)
-    const { payload } = await hp.ownedData().view(ownedDataV2)
-    expect(payload).toEqual(expectedOwnedData.payload)
-    ownedDataV1 = await hp.ownedData().getById({
-      id: ownedDataV1.id,
-      current: false
-    })
-    expect(ownedDataV1.ended_at).not.toBeNull()
+  test('Should fail for non group member trying to view group owned document', async () => {
+    expect.assertions(13)
+    const {
+      admin1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    const {
+      document
+    } = await setupOwnDocument(1, admin1, groupId)
+    await logout()
+    await login(keyPairNewUser.address)
+
+    try {
+      await hp.document().viewByCID(document)
+    } catch (err) {
+      expect(err.message).toContain('User does not have access to document with cid')
+    }
   })
 
-  test('Soft delete owned data', async () => {
-    let { ownedData } = await setupOwnedData(1)
-    await hp.ownedData().softDelete(ownedData.id)
-    ownedData = await hp.ownedData().getById({
-      id: ownedData.id,
-      current: false
-    })
-    expect(ownedData.ended_at).not.toBeNull()
-    expect(ownedData.is_deleted).toBe(true)
+  test('Delete own document', async () => {
+    let { document } = await setupOwnDocument(1)
+    const { cid } = document
+    document = await hp.document().findByCID(cid)
+    expect(document).toBeDefined()
+    await hp.document().delete(cid)
+    document = await hp.document().findByCID(cid)
+    expect(document).toBeNull()
   })
 
   test('Share data and view', async () => {
     await login(keyPair1.address)
     await logout()
     await login(keyPair2.address)
-    const expectedData = getBaseData(2)
-    const ownedData = await hp.ownedData().upsert(expectedData)
-    assertOwnedData(ownedData, expectedData)
-    expectedData.fromUserAddress = keyPair2.address
-    expectedData.toUserAddress = keyPair1.address
-    expectedData.originalOwnedDataId = ownedData.id
-    let sharedData = await hp.sharedData().shareExisting(expectedData)
-    assertSharedData(sharedData, expectedData)
+    const expectedDocument = getBaseData(2)
+    expectedDocument.ownerActorAddress = keyPair2.address
+    expectedDocument.toActorAddress = keyPair1.address
+    let document = await hp.document().share(expectedDocument)
+    assertSharedDocument(document, expectedDocument)
 
-    sharedData = await hp.sharedData().viewByID({
-      id: sharedData.id
-    })
-    assertSharedData(sharedData, expectedData)
-    expect(sharedData.payload).toEqual(expectedData.payload)
+    document = await hp.document().viewByCID(document)
+    assertSharedDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
 
-    await logout()
-    await login(keyPair1.address)
-
-    const {
-      cid,
-      iv,
-      mac,
-      original_owned_data: {
-        type
-      },
-      from_user: {
-        public_key: fromPublicKey
-      },
-      to_user: {
-        public_key: toPublicKey
-      }
-    } = sharedData
-    const { payload } = await hp.sharedData().view({
-      cid,
-      iv,
-      mac,
-      type,
-      toPublicKey,
-      fromPublicKey
-    })
-    expect(payload).toEqual(expectedData.payload)
-    sharedData = await hp.sharedData().viewByID({
-      id: sharedData.id
-    })
-    assertSharedData(sharedData, expectedData)
-    expect(sharedData.payload).toEqual(expectedData.payload)
-    sharedData = await hp.sharedData().viewByCID({
-      cid: sharedData.cid
-    })
-    assertSharedData(sharedData, expectedData)
-    expect(sharedData.payload).toEqual(expectedData.payload)
+    await assertCanViewSharedDocument(keyPair1, document.cid, expectedDocument)
   })
 
-  test('Share new owned data', async () => {
-    await login(keyPair1.address)
-    await logout()
+  test('User can share data with group', async () => {
+    const {
+      admin1,
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
     await login(keyPair2.address)
-    const expectedData = getBaseData(1)
-    expectedData.fromUserAddress = keyPair2.address
-    expectedData.toUserAddress = keyPair1.address
-    let {
-      ownedData,
-      sharedData
-    } = await hp.sharedData().shareNew(expectedData)
-    assertSharedData(sharedData, expectedData)
+    const expectedDocument = getBaseData(2)
+    expectedDocument.ownerActorAddress = keyPair2.address
+    expectedDocument.toActorId = groupId
+    let document = await hp.document().share(expectedDocument)
+    assertSharedDocument(document, expectedDocument)
 
-    ownedData = await hp.ownedData().viewByID(ownedData)
-    assertOwnedData(ownedData, expectedData)
-    expect(ownedData.payload).toEqual(expectedData.payload)
-    sharedData = await hp.sharedData().viewByID({
-      id: sharedData.id
-    })
-    assertSharedData(sharedData, expectedData)
-    expect(sharedData.payload).toEqual(expectedData.payload)
+    document = await hp.document().viewByCID(document)
+    assertSharedDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
 
-    await logout()
-    await login(keyPair1.address)
+    await assertCanViewSharedDocument(admin1, document.cid, expectedDocument)
+    await assertCanViewSharedDocument(member1, document.cid, expectedDocument)
+  })
 
-    sharedData = await hp.sharedData().viewByID({
-      id: sharedData.id
-    })
-    assertSharedData(sharedData, expectedData)
-    expect(sharedData.payload).toEqual(expectedData.payload)
+  test('Group can share data with user', async () => {
+    const {
+      admin1,
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    await login(admin1.address)
+    const expectedDocument = getBaseData(2)
+    expectedDocument.ownerActorId = groupId
+    expectedDocument.actorId = groupId
+    expectedDocument.toActorAddress = keyPair1.address
+    let document = await hp.document().share(expectedDocument)
+    assertSharedDocument(document, expectedDocument)
+
+    document = await hp.document().viewByCID(document)
+    assertSharedDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
+
+    await assertCanViewSharedDocument(keyPair1, document.cid, expectedDocument)
+    await assertCanViewSharedDocument(member1, document.cid, expectedDocument)
+  })
+
+  test('Group can share data with group', async () => {
+    const g1 = await setupGroup()
+    const g2 = await setupGroup()
+    await hp.logout()
+    await login(g1.admin1.address)
+    const expectedDocument = getBaseData(2)
+    expectedDocument.ownerActorId = g1.group.id
+    expectedDocument.actorId = g1.group.id
+    expectedDocument.toActorId = g2.group.id
+    let document = await hp.document().share(expectedDocument)
+    assertSharedDocument(document, expectedDocument)
+
+    document = await hp.document().viewByCID(document)
+    assertSharedDocument(document, expectedDocument)
+    expect(document.payload).toEqual(expectedDocument.payload)
+
+    await assertCanViewSharedDocument(g1.member1, document.cid, expectedDocument)
+    await assertCanViewSharedDocument(g2.member1, document.cid, expectedDocument)
+    await assertCanViewSharedDocument(g2.admin1, document.cid, expectedDocument)
   })
 
   test('Update shared data metadata', async () => {
-    let { sharedData, expectedData } = await setupSharedData(1)
+    let { document, expectedDocument } = await setupSharedDocument(1)
     await logout()
     await login(keyPair1.address)
     const name = 'Updated name'
     const description = 'Updated description'
-    const id = sharedData.id
-    await hp.sharedData().updateMetadata({
-      id,
+    const { cid } = document
+    await hp.document().updateMetadata({
+      cid,
       name,
       description
     })
-    expectedData.name = name
-    expectedData.description = description
-    sharedData = await hp.sharedData().getById(id)
-    assertSharedData(sharedData, expectedData)
+    expectedDocument.name = name
+    expectedDocument.description = description
+    document = await hp.document().getByCID(cid)
+    assertSharedDocument(document, expectedDocument)
   })
 
   test('Should fail for non owner trying to view shared data', async () => {
-    expect.assertions(21)
-    const { sharedData } = await setupSharedData(1)
+    expect.assertions(18)
+    const { document } = await setupSharedDocument(1)
     await logout()
     await login(keyPairNewUser.address)
     try {
-      const {
-        cid,
-        iv,
-        mac,
-        original_owned_data: {
-          type
-        },
-        from_user: {
-          public_key: fromPublicKey
-        },
-        to_user: {
-          public_key: toPublicKey
-        }
-      } = sharedData
-      await hp.sharedData().view({
-        cid,
-        iv,
-        mac,
-        type,
-        toPublicKey,
-        fromPublicKey
-      })
+      await hp.document().viewByCID(document)
     } catch (err) {
-      expect(err.message).toContain('Invalid MAC')
+      expect(err.message).toContain('User does not have access to document with cid')
     }
   })
 
   test('Only "shared to" user can update metadata', async () => {
-    expect.assertions(18)
-    const { sharedData } = await setupSharedData(1)
+    expect.assertions(15)
+    const { document } = await setupSharedDocument(1)
     const name = 'Updated name'
     const description = 'Updated description'
-    const id = sharedData.id
+    const cid = document.cid
     try {
-      await hp.sharedData().updateMetadata({
-        id,
+      await hp.document().updateMetadata({
+        cid,
         name,
         description
       })
     } catch (err) {
-      expect(err.message).toContain('has not been shared data with id')
+      expect(err.message).toContain('User does not have permission to update metadata of document with cid')
     }
   })
 
-  test('Delete shared data', async () => {
-    let { sharedData } = await setupSharedData(1)
+  test('Delete shared document', async () => {
+    let { document } = await setupSharedDocument(1)
     await logout()
     await login(keyPair1.address)
-
-    await hp.sharedData().delete(sharedData.id)
-    sharedData = await hp.sharedData().findById(sharedData.id)
-    expect(sharedData).toBeNull()
+    document = await hp.document().findByCID(document.cid)
+    expect(document).toBeDefined()
+    await hp.document().delete(document.cid)
+    document = await hp.document().findByCID(document.cid)
+    expect(document).toBeNull()
   })
-  /** *Hasura does not throw error, it just does not delete the record */
-  // test('Only "shared to" user can delete share', async () => {
-  //   expect.assertions(18)
-  //   await login(keyPair1.address)
-  //   await logout()
-  //   await login(keyPair2.address)
-  //   const expectedData = getBaseData(1)
-  //   expectedData.fromUserAddress = keyPair2.address
-  //   expectedData.toUserAddress = keyPair1.address
-  //   const {
-  //     sharedData
-  //   } = await hp.sharedData().shareNew(expectedData)
-  //   assertSharedData(sharedData, expectedData)
-  //   try {
-  //     console.log('Shared data id: ', sharedData.id)
-  //     await hp.sharedData().delete(sharedData.id)
-  //   } catch (err) {
-  //     expect(err.message).toContain('has not been shared data with id')
-  //   }
-  // })
+
+  test('Only "shared to" user can delete shared document', async () => {
+    expect.assertions(15)
+    const { document } = await setupSharedDocument(1)
+    try {
+      await hp.document().delete(document.cid)
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to delete document with cid')
+    }
+  })
 })
 
 function newHashedPrivateInstance () {
+  console.log(`Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`)
   return new HashedPrivate({
     ipfsURL: 'https://ipfs.infura.io:5001',
     ipfsAuthHeader: `Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`,
     privateURI: 'http://localhost:8080/v1/graphql',
     signFn: (address, message) => {
-      const keyPair = keyring.getPair(address)
+      const keyPair = util.keyring.getPair(address)
       return keyPair.sign(message)
     }
   })
 }
-async function setupSharedData (num) {
+
+async function setupSharedDocument (num) {
   await login(keyPair1.address)
   await logout()
   await login(keyPair2.address)
-  const expectedData = getBaseData(num)
-  expectedData.fromUserAddress = keyPair2.address
-  expectedData.toUserAddress = keyPair1.address
-  const {
-    ownedData,
-    sharedData
-  } = await hp.sharedData().shareNew(expectedData)
-  assertSharedData(sharedData, expectedData)
+  const expectedDocument = getBaseData(num)
+  expectedDocument.ownerActorAddress = keyPair2.address
+  expectedDocument.toActorAddress = keyPair1.address
+  const document = await hp.document().share(expectedDocument)
+  assertSharedDocument(document, expectedDocument)
   return {
-    ownedData,
-    sharedData,
-    expectedData
+    document,
+    expectedDocument
   }
 }
 
-async function setupOwnedData (num) {
-  await login(keyPair1.address)
-  const expectedOwnedData = getBaseData(num)
-  const ownedData = await hp.ownedData().upsert(expectedOwnedData)
-  assertOwnedData(ownedData, expectedOwnedData)
+async function setupOwnDocument (num, userKP = null, ownerActorId = null) {
+  userKP = userKP || keyPair1
+  await login(userKP.address)
+  const expectedDocument = getBaseData(num)
+  if (ownerActorId) {
+    expectedDocument.ownerActorId = ownerActorId
+  } else {
+    expectedDocument.ownerActorAddress = userKP.address
+  }
+  const document = await hp.document().store({
+    ...expectedDocument,
+    actorId: ownerActorId
+  })
+  assertDocument(document, expectedDocument)
   return {
-    expectedOwnedData,
-    ownedData
+    expectedDocument,
+    document
   }
 }
+
 async function login (address) {
   expect(hp.isLoggedIn()).toBe(false)
   await hp.login(address)
@@ -397,8 +543,10 @@ async function logout () {
   expect(hp.isLoggedIn()).toBe(false)
 }
 
-function createKeyPair (mnemonic) {
-  return keyring.addFromUri(mnemonic, {}, 'ed25519')
+async function addUser () {
+  const kp = util.createKeyPair()
+  await hp.login(kp.address)
+  return kp
 }
 
 function getBaseData (num) {
@@ -408,38 +556,102 @@ function getBaseData (num) {
     payload: {
       prop1: num,
       prop2: `str${num}`
-    },
-    type: 'json'
+    }
   }
 }
 
-function assertOwnedData (actual, expected) {
-  expect(actual.id).not.toBeNull()
-  expect(actual.id).toBeGreaterThan(0)
-  expect(actual.name).toBe(expected.name)
-  expect(actual.description).toBe(expected.description)
-  expect(actual.cid).not.toBeNull()
-  expect(actual.iv).not.toBeNull()
-  expect(actual.mac).not.toBeNull()
-  expect(actual.type).toBe(expected.type)
-  expect(actual.started_at).not.toBeNull()
-  expect(actual.ended_at).toBeNull()
-  expect(actual.is_deleted).toBe(false)
+async function setupGroup () {
+  const kpUser1 = await addUser()
+  const kpUser2 = await addUser()
+  const kpUser3 = await addUser()
+  await hp.login(kpUser3.address)
+  const groupId = await hp.group().createGroup(getGroup())
+  await hp.group().upsertMember({
+    userAddress: kpUser1.address,
+    groupId,
+    roleId: GroupRole.Member
+  })
+  await hp.group().upsertMember({
+    userAddress: kpUser2.address,
+    groupId,
+    roleId: GroupRole.Admin
+  })
+  const group = await hp.group().findById(groupId)
+  return {
+    admin1: kpUser3,
+    admin2: kpUser2,
+    member1: kpUser1,
+    group
+  }
 }
 
-function assertSharedData (actual, expected) {
-  expect(actual.id).not.toBeNull()
-  expect(actual.id).toBeGreaterThan(0)
+function getGroup () {
+  return {
+    name: `g${Date.now()}`
+  }
+}
+
+function assertDocument (actual, expected) {
   expect(actual.name).toBe(expected.name)
   expect(actual.description).toBe(expected.description)
-  expect(actual.from_user.address).toBe(expected.fromUserAddress)
-  expect(actual.to_user.address).toBe(expected.toUserAddress)
   expect(actual.cid).not.toBeNull()
-  expect(actual.iv).not.toBeNull()
-  expect(actual.mac).not.toBeNull()
-  expect(actual.original_owned_data.type).toBe(expected.type)
-  expect(actual.shared_at).not.toBeNull()
-  if (expected.originalOwnedDataId) {
-    expect(actual.original_owned_data.id).toBe(expected.originalOwnedDataId)
+  expect(actual.createdAt).not.toBeNull()
+  expect(expected.ownerActorId || expected.ownerActorAddress).toBeDefined()
+  if (expected.ownerActorId) {
+    expect(actual.ownerActorId).toBe(expected.ownerActorId)
   }
+  if (expected.ownerActorAddress) {
+    expect(actual.owner.address).toBe(expected.ownerActorAddress)
+  }
+}
+
+async function assertCanViewSharedDocument (userKP, cid, expectedDocument) {
+  await logout()
+  await login(userKP.address)
+  document = await hp.document().viewByCID({ cid })
+  assertSharedDocument(document, expectedDocument)
+  expect(document.payload).toEqual(expectedDocument.payload)
+}
+
+function assertSharedDocument (actual, expected) {
+  expect(actual.name).toBe(expected.name)
+  expect(actual.description).toBe(expected.description)
+  expect(actual.cid).not.toBeNull()
+  expect(expected.ownerActorId || expected.ownerActorAddress).toBeDefined()
+  if (expected.ownerActorId) {
+    expect(actual.ownerActorId).toBe(expected.ownerActorId)
+  }
+  if (expected.ownerActorAddress) {
+    expect(actual.owner.address).toBe(expected.ownerActorAddress)
+  }
+  expect(expected.toActorId || expected.toActorAddress).toBeDefined()
+  if (expected.toActorId) {
+    expect(actual.toActorId).toBe(expected.toActorId)
+  }
+  if (expected.toActorAddress) {
+    expect(actual.toActor.address).toBe(expected.toActorAddress)
+  }
+  expect(actual.createdAt).not.toBeNull()
+}
+
+function assertGroup (actual, expected) {
+  expect(actual.name).toBe(expected.name)
+  expect(actual.users.length).toBe(expected.users.length)
+  for (const user of expected.users) {
+    assertGroupUser(actual, user)
+  }
+}
+
+function assertGroupUser (group, user) {
+  const {
+    name,
+    users
+  } = group
+  for (const u of users) {
+    if (user.address === u.user.address) {
+      expect(user.roleId).toBe(u.roleId)
+      return
+    }
+  }
+  throw new Error(`User with address: ${user.address} is not part of group: ${name}`)
 }

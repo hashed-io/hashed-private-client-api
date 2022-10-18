@@ -9,12 +9,14 @@ class Cipher {
   constructor ({
     auth,
     actor,
-    defaultActor
+    defaultActor,
+    crypto
   }) {
     this._auth = auth
     this._actor = actor
-    this._defaultCipher = this._setCipher(defaultActor)
     this._ciphers = {}
+    this._crypto = crypto
+    this._defaultCipher = this._setCipher(defaultActor)
     auth.once('logout', () => {
       this._defaultCipher = null
       this._ciphers = {}
@@ -26,7 +28,7 @@ class Cipher {
     actorId = null
   }) {
     const cipher = await this._getCipher(actorId)
-    const cipheredPayload = cipher.cipher({ payload })
+    const cipheredPayload = await cipher.cipher({ payload })
     return {
       ownerActorId: cipher.actorId(),
       cipheredPayload
@@ -46,7 +48,7 @@ class Cipher {
     actorId = null
   }) {
     const cipher = await this._getCipher(actorId)
-    const cipheredPayload = cipher.cipherShared({
+    const cipheredPayload = await cipher.cipherShared({
       payload,
       publicKey
     })
@@ -75,7 +77,7 @@ class Cipher {
     } else {
       throw new Error('User does not have permission to view the payload')
     }
-    return (await this._getCipher(actorId)).cipherShared({
+    return (await this._getCipher(actorId)).decipherShared({
       fullCipheredPayload,
       publicKey
     })
@@ -114,7 +116,7 @@ class Cipher {
   }
 
   _setCipher (actor) {
-    const cipher = createCipher(actor)
+    const cipher = createCipher(actor, this._crypto)
     this._ciphers[actor.id] = cipher
     return cipher
   }
@@ -127,11 +129,8 @@ function createCipher ({
   name,
   address,
   publicKey,
-  privateInfo: {
-    privateKey
-  },
-  crypto
-}) {
+  privateKey
+}, crypto) {
   return {
     actorId () {
       return id

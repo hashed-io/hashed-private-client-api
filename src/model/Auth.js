@@ -5,7 +5,6 @@ const jwtDecode = require('jwt-decode')
 const BaseGQLModel = require('./BaseGQLModel')
 const Cipher = require('./Cipher')
 const { LocalStorageKey } = require('../const')
-const { Crypto } = require('@smontero/hashed-crypto')
 
 const GENERATE_LOGIN_CHALLENGE = gql`
   mutation generate_login_challenge($address: String!){
@@ -28,8 +27,8 @@ const LOGIN = gql`
       user{
         address
         id
-        public_key
-        security_data
+        publicKey
+        privateKey
       }
     }
   }
@@ -41,12 +40,11 @@ class Auth extends BaseGQLModel {
   }
 
   init ({ gql, user, signFn, crypto }) {
-    this._userInfo = null
     this._gql = gql
     this._user = user
     this._signFn = signFn
     this._crypto = crypto
-    this._cipher = null
+    this._context = {}
   }
 
   async login (address) {
@@ -82,23 +80,24 @@ class Auth extends BaseGQLModel {
         securityData
       })
     }
+    console.log('token: ', token)
+    this._context.token = token
     this._setUserInfo(user)
     this._createCipher(user)
   }
 
   async userInfo () {
-    this._assureIsInitialized()
-    return this._userInfo
+    await this._assureIsInitialized()
+    return this._context.userInfo
   }
 
   async cipher () {
-    this._assureIsInitialized()
-    return this._cipher
+    await this._assureIsInitialized()
+    return this._context.cipher
   }
 
   async logout () {
-    this._userInfo = null
-    this._cipher = null
+    this._context = {}
     localStorage.removeItem(LocalStorageKey.JWT)
     await this._gql.clearStore()
     this.emit('logout')
@@ -133,7 +132,7 @@ class Auth extends BaseGQLModel {
 
   async _assureIsInitialized () {
     this.assertIsLoggedIn()
-    if (!this._userInfo) {
+    if (!this._context.userInfo) {
       const user = await this._user.getFullById(this._getUserId())
       this._setUserInfo(user)
       this._createCipher(user)
@@ -145,17 +144,18 @@ class Auth extends BaseGQLModel {
       id,
       address
     } = user
-    this._userInfo = {
+    this._context.userInfo = {
       id,
       address
     }
   }
 
   _createCipher (user) {
-    this._cipher = new Cipher({
+    this._context.cipher = new Cipher({
       auth: this,
       actor: this._user,
-      defaultActor: user
+      defaultActor: user,
+      crypto: this._crypto
     })
   }
 }

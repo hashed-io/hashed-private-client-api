@@ -67,7 +67,7 @@ class User extends Actor {
   }
 
   async findByAddress (address) {
-    const { user } = await this.query({
+    const { actor: user } = await this.query({
       query: FIND_BY_ADDRESS,
       variables: {
         address
@@ -82,6 +82,20 @@ class User extends Actor {
       throw new Error(`User with address: ${address} not found`)
     }
     return user
+  }
+
+  async getUserId ({
+    userId = null,
+    userAddress = null
+  }) {
+    if (userId) {
+      return userId
+    }
+    if (userAddress) {
+      const { id } = await this.getByAddress(userAddress)
+      return id
+    }
+    throw new Error('User id or address must be specified')
   }
 
   async updateSecurityData ({ id, publicKey, securityData }) {

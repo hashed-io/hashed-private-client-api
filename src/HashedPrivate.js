@@ -1,5 +1,6 @@
+const { Crypto } = require('@smontero/hashed-crypto')
 const { AuthLink } = require('./link')
-const { Auth, OwnedData, SharedData, Privacy, User } = require('./model')
+const { Actor, Auth, Document, Group, User } = require('./model')
 const { GQL, IPFS } = require('./service')
 
 /**
@@ -24,6 +25,7 @@ class HashedPrivate {
       privateURI,
       signFn
     } = opts
+    const crypto = new Crypto()
     this._ipfs = new IPFS({
       url: ipfsURL,
       authHeader: ipfsAuthHeader
@@ -33,15 +35,18 @@ class HashedPrivate {
       uri: privateURI,
       links: new AuthLink({ auth: this._auth })
     })
-    this._user = new User({ gql })
+    this._actor = new Actor({ gql })
+    const user = new User({ gql })
+    this._user = user
+    this._group = new Group({ gql, crypto, user })
     this._auth.init({
+      crypto,
       gql,
       user: this._user,
       signFn
     })
     this._gql = gql
-    this._ownedData = null
-    this._sharedData = null
+    this._document = null
   }
 
   /**
@@ -54,20 +59,12 @@ class HashedPrivate {
    */
   async login (address) {
     await this._auth.login(address)
-    const privacy = new Privacy({
-      auth: this._auth
-    })
-    this._ownedData = new OwnedData({
+
+    this._document = new Document({
+      actor: this._actor,
       gql: this._gql,
-      privacy,
+      cipher: await this._auth.cipher(),
       ipfs: this._ipfs
-    })
-    this._sharedData = new SharedData({
-      gql: this._gql,
-      privacy,
-      ipfs: this._ipfs,
-      ownedData: this._ownedData,
-      user: this._user
     })
   }
 
@@ -78,8 +75,7 @@ class HashedPrivate {
    */
   async logout () {
     await this._auth.logout()
-    this._ownedData = null
-    this._sharedData = null
+    this._document = null
   }
 
   /**
@@ -92,23 +88,23 @@ class HashedPrivate {
   }
 
   /**
-   * @desc Returns the ownedData object
+   * @desc Returns the document object
    *
-   * @return {Object} ownedData object @see OwnedData
+   * @return {Object} document object @see Document
    */
-  ownedData () {
+  document () {
     this._auth.assertIsLoggedIn()
-    return this._ownedData
+    return this._document
   }
 
   /**
-   * @desc Returns the sharedData object
+   * @desc Returns the group object
    *
-   * @return {Object} sharedData object @see SharedData
+   * @return {Object} group object @see Group
    */
-  sharedData () {
+  group () {
     this._auth.assertIsLoggedIn()
-    return this._sharedData
+    return this._group
   }
 }
 
