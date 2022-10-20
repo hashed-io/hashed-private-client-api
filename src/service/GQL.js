@@ -28,7 +28,6 @@ class GQL {
     const { evict } = config
     if (evict) {
       const cache = this.client.cache
-      console.log('evicting: ', evict)
       cache.evict(evict)
       cache.gc()
     }

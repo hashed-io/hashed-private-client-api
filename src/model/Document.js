@@ -233,14 +233,11 @@ class Document extends BaseGQLModel {
     payload,
     actorId = null
   }) {
-    console.log('Ciphering payload...')
     const {
       ownerActorId,
       cipheredPayload
     } = await this._cipher.cipher({ payload, actorId })
-    console.log('Storing in ipfs...', cipheredPayload)
     const cid = await this._ipfs.add(cipheredPayload)
-    console.log('Creating doc  ipfs...')
     return this._createDoc({
       name,
       description,
@@ -358,7 +355,7 @@ class Document extends BaseGQLModel {
         publicKey: ownerPublicKey
       }
     } = document
-    console.log('Document: ', document)
+    // console.log('Document: ', document)
     const fullCipheredPayload = await this._ipfs.cat(cid)
     let payload = null
     if (!toActorId) {
@@ -388,17 +385,24 @@ class Document extends BaseGQLModel {
     ownerActorId,
     toActorId
   }) {
-    const { insert_document_one: doc } = await this.mutate({
-      mutation: CREATE_DOC,
-      variables: {
-        name,
-        description,
-        cid,
-        ownerActorId,
-        toActorId
+    try {
+      const { insert_document_one: doc } = await this.mutate({
+        mutation: CREATE_DOC,
+        variables: {
+          name,
+          description,
+          cid,
+          ownerActorId,
+          toActorId
+        }
+      })
+      return doc
+    } catch (error) {
+      if (error.message.includes('check constraint of an insert/update permission has failed')) {
+        throw new Error(`User does not have permission to create document on group: ${ownerActorId}`)
       }
-    })
-    return doc
+      throw error
+    }
   }
 }
 

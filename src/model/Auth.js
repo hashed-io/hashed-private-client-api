@@ -80,7 +80,7 @@ class Auth extends BaseGQLModel {
         securityData
       })
     }
-    console.log('token: ', token)
+    // console.log('token: ', token)
     this._context.token = token
     this._setUserInfo(user)
     this._createCipher(user)

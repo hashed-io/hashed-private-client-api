@@ -30,7 +30,6 @@ describe('Group tests', () => {
     await hp.login(keyPair1.address)
     const expectedGroup = getGroup()
     const groupId = await hp.group().createGroup(expectedGroup)
-    console.log('GroupId: ', groupId)
     let group = await hp.group().findById(groupId)
     expectedGroup.users = [{
       address: keyPair1.address,
@@ -99,7 +98,6 @@ describe('Group tests', () => {
         id: groupId
       }
     } = await setupGroup()
-    console.log('groupId: ', groupId, 'member1: ', member1.address)
     const nonMember1 = await addUser()
     const nonMember2 = await addUser()
     try {
@@ -234,6 +232,40 @@ describe('HashedPrivate Integration Tests', () => {
     expect(document.payload).toEqual(expectedDocument.payload)
   })
 
+  test('Should fail for Non group admin trying to create document', async () => {
+    expect.assertions(3)
+    const {
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    await hp.login(member1.address)
+    const expectedDocument = getBaseData(1)
+    expectedDocument.ownerActorId = groupId
+    try {
+      await hp.document().store({
+        ...expectedDocument,
+        actorId: groupId
+      })
+    } catch (error) {
+      expect(error.message).toContain('User does not have permission to create document on group')
+    }
+
+    await hp.logout()
+    await hp.login(util.createKeyPair().address)
+    expectedDocument.ownerActorId = groupId
+    try {
+      await hp.document().store({
+        ...expectedDocument,
+        actorId: groupId
+      })
+    } catch (error) {
+      expect(error.message).toContain('User does not have permission to view actor\'s with')
+    }
+  })
+
   test('Update owned data metadata', async () => {
     let {
       document,
@@ -328,6 +360,73 @@ describe('HashedPrivate Integration Tests', () => {
     expect(document).toBeNull()
   })
 
+  test('Should fail for non owner trying to delete document', async () => {
+    expect.assertions(14)
+    let { document } = await setupOwnDocument(1)
+    const { cid } = document
+    document = await hp.document().findByCID(cid)
+    expect(document).toBeDefined()
+    await logout()
+    await login(keyPair2.address)
+    try {
+      await hp.document().delete(cid)
+    } catch (error) {
+      expect(error.message).toContain('User does not have permission to delete document with cid')
+    }
+  })
+
+  test('Group Admin can delete own document', async () => {
+    const {
+      admin1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    let {
+      document
+    } = await setupOwnDocument(1, admin1, groupId)
+    const { cid } = document
+    document = await hp.document().findByCID(cid)
+    expect(document).toBeDefined()
+    await hp.document().delete(cid)
+    document = await hp.document().findByCID(cid)
+    expect(document).toBeNull()
+  })
+
+  test('Should fail for Non group admin trying to delete document', async () => {
+    expect.assertions(18)
+    const {
+      admin1,
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    let {
+      document
+    } = await setupOwnDocument(1, admin1, groupId)
+    const { cid } = document
+    document = await hp.document().findByCID(cid)
+    expect(document).toBeDefined()
+    await logout()
+    await login(member1.address)
+    try {
+      await hp.document().delete(cid)
+    } catch (error) {
+      expect(error.message).toContain('User does not have permission to delete document with cid')
+    }
+
+    await logout()
+    await login(util.createKeyPair().address)
+    try {
+      await hp.document().delete(cid)
+    } catch (error) {
+      expect(error.message).toContain('User does not have permission to delete document with cid')
+    }
+  })
+
   test('Share data and view', async () => {
     await login(keyPair1.address)
     await logout()
@@ -416,7 +515,7 @@ describe('HashedPrivate Integration Tests', () => {
   })
 
   test('Update shared data metadata', async () => {
-    let { document, expectedDocument } = await setupSharedDocument(1)
+    let { document, expectedDocument } = await setupSharedDocument({ num: 1 })
     await logout()
     await login(keyPair1.address)
     const name = 'Updated name'
@@ -433,9 +532,60 @@ describe('HashedPrivate Integration Tests', () => {
     assertSharedDocument(document, expectedDocument)
   })
 
-  test('Should fail for non owner trying to view shared data', async () => {
+  test('Shared to Group Admin can update document metadata', async () => {
+    const {
+      admin1,
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    let { document, expectedDocument } = await setupSharedDocument({
+      num: 1,
+      toKP: member1,
+      toId: groupId
+    })
+    await logout()
+    await login(admin1.address)
+    const name = 'Updated name'
+    const description = 'Updated description'
+    const { cid } = document
+    await hp.document().updateMetadata({
+      cid,
+      name,
+      description
+    })
+    expectedDocument.name = name
+    expectedDocument.description = description
+    document = await hp.document().getByCID(cid)
+    assertSharedDocument(document, expectedDocument)
+  })
+
+  test('Should fail for non owner trying to view shared document', async () => {
     expect.assertions(18)
-    const { document } = await setupSharedDocument(1)
+    const { document } = await setupSharedDocument({ num: 1 })
+    await logout()
+    await login(keyPairNewUser.address)
+    try {
+      await hp.document().viewByCID(document)
+    } catch (err) {
+      expect(err.message).toContain('User does not have access to document with cid')
+    }
+  })
+
+  test('Should fail for non group member trying to view shared document', async () => {
+    expect.assertions(31)
+    const {
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    const { document, expectedDocument } = await setupSharedDocument({ num: 1, toKP: member1, toId: groupId })
+    await logout()
+    await assertCanViewSharedDocument(member1, document.cid, expectedDocument)
     await logout()
     await login(keyPairNewUser.address)
     try {
@@ -447,7 +597,7 @@ describe('HashedPrivate Integration Tests', () => {
 
   test('Only "shared to" user can update metadata', async () => {
     expect.assertions(15)
-    const { document } = await setupSharedDocument(1)
+    const { document } = await setupSharedDocument({ num: 1 })
     const name = 'Updated name'
     const description = 'Updated description'
     const cid = document.cid
@@ -462,8 +612,61 @@ describe('HashedPrivate Integration Tests', () => {
     }
   })
 
+  test('Should fail for shared to Non Group Admin trying to update document metadata', async () => {
+    expect.assertions(26)
+    const {
+      member1,
+      group: {
+        id: groupId
+      }
+    } = await setupGroup()
+    await hp.logout()
+    const { document } = await setupSharedDocument({
+      num: 1,
+      toKP: member1,
+      toId: groupId
+    })
+    const name = 'Updated name'
+    const description = 'Updated description'
+    const { cid } = document
+
+    await logout()
+    await login(member1.address)
+    try {
+      await hp.document().updateMetadata({
+        cid,
+        name,
+        description
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to update metadata of document with cid')
+    }
+    await logout()
+    await login(util.createKeyPair().address)
+    try {
+      await hp.document().updateMetadata({
+        cid,
+        name,
+        description
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to update metadata of document with cid')
+    }
+    await logout()
+    await login(keyPair2.address)
+    try {
+      await hp.document().updateMetadata({
+        cid,
+        name,
+        description
+      })
+    } catch (err) {
+      expect(err.message).toContain('User does not have permission to update metadata of document with cid')
+    }
+  })
+
   test('Delete shared document', async () => {
-    let { document } = await setupSharedDocument(1)
+    let { document } = await setupSharedDocument({ num: 1 })
     await logout()
     await login(keyPair1.address)
     document = await hp.document().findByCID(document.cid)
@@ -475,7 +678,7 @@ describe('HashedPrivate Integration Tests', () => {
 
   test('Only "shared to" user can delete shared document', async () => {
     expect.assertions(15)
-    const { document } = await setupSharedDocument(1)
+    const { document } = await setupSharedDocument({ num: 1 })
     try {
       await hp.document().delete(document.cid)
     } catch (err) {
@@ -485,7 +688,7 @@ describe('HashedPrivate Integration Tests', () => {
 })
 
 function newHashedPrivateInstance () {
-  console.log(`Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`)
+  // console.log(`Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`)
   return new HashedPrivate({
     ipfsURL: 'https://ipfs.infura.io:5001',
     ipfsAuthHeader: `Basic ${Buffer.from(`${process.env.IPFS_PROJECT_ID}:${process.env.IPFS_PROJECT_SECRET}`).toString('base64')}`,
@@ -497,13 +700,29 @@ function newHashedPrivateInstance () {
   })
 }
 
-async function setupSharedDocument (num) {
-  await login(keyPair1.address)
+async function setupSharedDocument ({
+  num,
+  ownerKP = null,
+  ownerId = null,
+  toKP = null,
+  toId = null
+}) {
+  ownerKP = ownerKP || keyPair2
+  toKP = toKP || keyPair1
+  await login(toKP.address)
   await logout()
-  await login(keyPair2.address)
+  await login(ownerKP.address)
   const expectedDocument = getBaseData(num)
-  expectedDocument.ownerActorAddress = keyPair2.address
-  expectedDocument.toActorAddress = keyPair1.address
+  if (ownerId) {
+    expectedDocument.ownerActorId = ownerId
+  } else {
+    expectedDocument.ownerActorAddress = ownerKP.address
+  }
+  if (toId) {
+    expectedDocument.toActorId = toId
+  } else {
+    expectedDocument.toActorAddress = toKP.address
+  }
   const document = await hp.document().share(expectedDocument)
   assertSharedDocument(document, expectedDocument)
   return {
@@ -608,7 +827,7 @@ function assertDocument (actual, expected) {
 async function assertCanViewSharedDocument (userKP, cid, expectedDocument) {
   await logout()
   await login(userKP.address)
-  document = await hp.document().viewByCID({ cid })
+  const document = await hp.document().viewByCID({ cid })
   assertSharedDocument(document, expectedDocument)
   expect(document.payload).toEqual(expectedDocument.payload)
 }
