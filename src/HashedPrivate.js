@@ -106,6 +106,16 @@ class HashedPrivate {
     this._auth.assertIsLoggedIn()
     return this._group
   }
+
+  /**
+   * @desc Returns the graphql client object
+   *
+   * @return {Object} group object @see GGL
+   */
+  gql () {
+    this._auth.assertIsLoggedIn()
+    return this._gql
+  }
 }
 
 module.exports = HashedPrivate
