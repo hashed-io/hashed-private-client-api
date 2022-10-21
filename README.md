@@ -12,7 +12,7 @@ Access to most of the functionality is done through the HashedPrivate object whi
 
 
 
-A new instance of the [HashedPrivate](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/HashedPrivate.js#L6) class has to be created passing in the 
+A new instance of the [HashedPrivate](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/HashedPrivate.js#L20) class has to be created passing in the 
 ipfs url, hashed private server endpoint and the sigining function:
 
 ```
@@ -30,11 +30,11 @@ Then the user has to be logged in into the hashed private server:
 
 `await hp.login(address)`
 
-Once logged in the services provided by the [Document](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L98) and [Group](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L120) objects can be accessed.  
+Once logged in the services provided by the [Document](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L83) and [Group](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L67) objects can be accessed.  
 
 **Document services**
 
-* [store](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L175): Store a personal private document in the hashed private service
+* [store](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L230): Store a personal private document in the hashed private service
 
 ```
 const document = await hp.document().store({
@@ -48,7 +48,7 @@ const document = await hp.document().store({
 ```
 This method receives an optional actorId parameter that can be used to store a document on behalf of a group
 
-* [share](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L175): Share a private document with another user or group
+* [share](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L281): Share a private document with another user or group
 
 ```
 const document = await hp.document().share({
@@ -64,13 +64,13 @@ const document = await hp.document().share({
 This method receives an optional actorId parameter that can be used to store a document on behalf of a group
 
 
-* [viewByCID](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): View a stored payload by specifying the cid, returns the deciphered payload(object or File)
+* [viewByCID](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L343): View a stored payload by specifying the cid, returns the deciphered payload(object or File)
 
 ```
 const document = await hp.document().viewByCID({cid})
 ```
 
-* [updateMetadata](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): Update the metadata for a document
+* [updateMetadata](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L186): Update the metadata for a document
 
 ```
 const document = await hp.document().updateMetadata({
@@ -80,7 +80,7 @@ const document = await hp.document().updateMetadata({
   })
 ```
 
-* [delete](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): Delete a document by specifying the cid
+* [delete](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L166): Delete a document by specifying the cid
 
 ```
 await hp.document().delete(cid)
@@ -88,19 +88,19 @@ await hp.document().delete(cid)
 
 **Group services**
 
-* [getById](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L221): Get the group details by id
+* [getById](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L143): Get the group details by id
 
 ```
 let group = await hp.group().getById(groupId)
 ```
 
-* [createGroup](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L189): Create a group
+* [createGroup](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L157): Create a group
 
 ```
 let groupId = await hp.group().createGroup({name})
 ```
 
-* [upsertMember](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L294): Insert a group member or update the role for an existing member 
+* [upsertMember](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L188): Insert a group member or update the role for an existing member 
 
 ```
 await hp.group().upsertMember({
@@ -110,7 +110,7 @@ await hp.group().upsertMember({
 })
 ```
 
-* [deleteMember](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L294): Delete a group member 
+* [deleteMember](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L225): Delete a group member 
 
 ```
 await hp.group().deleteMember({
