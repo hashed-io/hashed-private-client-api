@@ -148,6 +148,12 @@ class Group extends Actor {
     return group
   }
 
+  /**
+   * @desc Creates a group
+   *
+   * @param {string} name
+   * @return {string} id of the newly created group
+   */
   async createGroup ({ name }) {
     const {
       publicKey,
@@ -169,6 +175,16 @@ class Group extends Actor {
     return id
   }
 
+  /**
+   * @desc Insert a group member or update the role for an existing member, one
+   * of userId or userAddress has to be specified
+   *
+   * @param {string} [userId] the user id to add as member or update role
+   * @param {string} [userAddress] the user address to add as member or update role
+   * @param {string} [groupId]
+   * @param {string} [roleId] the id of the role to assign the user
+   * @throws {Error} if the user is not a group admin
+   */
   async upsertMember ({
     userId = null,
     userAddress = null,
@@ -197,6 +213,15 @@ class Group extends Actor {
     }
   }
 
+  /**
+   * @desc Delete a group member one
+   * of userId or userAddress has to be specified
+   *
+   * @param {string} [userId] the user id to add as member or update role
+   * @param {string} [userAddress] the user address to add as member or update role
+   * @param {string} [groupId]
+   * @throws {Error} if the user is not a group admin
+   */
   async deleteMember ({
     userId = null,
     userAddress = null,

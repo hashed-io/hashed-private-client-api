@@ -6,7 +6,7 @@ To install the hashed private client api run the following command:
 
 `npm i --save @smontero/hashed-private-client-api`
 
-Access to most of the functionality is done through the HashedPrivate object which enables its configuration and provides access to the dfferent API objects:
+Access to most of the functionality is done through the HashedPrivate object which enables its configuration and provides access to the different API objects:
 
 `import { HashedPrivate } from '@smontero/hashed-private-client-api'`
 
@@ -30,14 +30,14 @@ Then the user has to be logged in into the hashed private server:
 
 `await hp.login(address)`
 
-Once logged in the services provided by the [OwnedData](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L98) and [SharedData](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L120) objects can be accessed.  
+Once logged in the services provided by the [Document](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L98) and [Group](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L120) objects can be accessed.  
 
-**OwnedData services**
+**Document services**
 
-* [upsert](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L175): Store a payload(object or File) in the hashed private service
+* [store](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L175): Store a personal private document in the hashed private service
 
 ```
-const ownedData = await hp.ownedData().upsert({
+const document = await hp.document().store({
     name: 'name1',
     description: 'desc1',
     payload: {
@@ -46,49 +46,75 @@ const ownedData = await hp.ownedData().upsert({
     }
   })
 ```
+This method receives an optional actorId parameter that can be used to store a document on behalf of a group
 
-* [viewByID](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L205): View a stored payload by owned data id, returns the deciphered payload(object or File)
-
-```
-const ownedData = await hp.ownedData().viewByID({id})
-```
-
-* [viewByCID](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): View a stored payload by owned data cid, returns the deciphered payload(object or File)
+* [share](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L175): Share a private document with another user or group
 
 ```
-const ownedData = await hp.ownedData().viewByCID({id})
+const document = await hp.document().share({
+    toActorAddress: '5CBLWNtpdafzuUsq7P5Hn4amrBAd66R183FmHkEC7utB28ni'
+    name: 'name1',
+    description: 'desc1',
+    payload: {
+      prop1: 1,
+      prop2: 'str1'
+    }
+  })
+```
+This method receives an optional actorId parameter that can be used to store a document on behalf of a group
+
+
+* [viewByCID](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): View a stored payload by specifying the cid, returns the deciphered payload(object or File)
+
+```
+const document = await hp.document().viewByCID({cid})
 ```
 
-**SharedData services**
-
-* [shareExisting](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L221): Share the specified existing owned data record with another user
+* [updateMetadata](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): Update the metadata for a document
 
 ```
-let sharedData = await hp.sharedData().shareExisting({
-  toUserAddress,
-  originalOwnedDataId
+const document = await hp.document().updateMetadata({
+    cid,
+    name,
+    description
+  })
+```
+
+* [delete](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): Delete a document by specifying the cid
+
+```
+await hp.document().delete(cid)
+```
+
+**Group services**
+
+* [getById](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L221): Get the group details by id
+
+```
+let group = await hp.group().getById(groupId)
+```
+
+* [createGroup](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L189): Create a group
+
+```
+let groupId = await hp.group().createGroup({name})
+```
+
+* [upsertMember](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L294): Insert a group member or update the role for an existing member 
+
+```
+await hp.group().upsertMember({
+  userAddress,
+  groupId,
+  roleId
 })
 ```
 
-* [shareNew](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L189): Share new payload with another user, it first creates an owned data record for the user
+* [deleteMember](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L294): Delete a group member 
 
 ```
-let sharedData = await hp.sharedData().shareNew({
-  toUserAddress,
-  name,
-  description,
-  payload
+await hp.group().deleteMember({
+  userAddress,
+  groupId
 })
-```
-
-* [viewByID](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/SharedData.js#L294): View a stored payload by shared data id, returns the deciphered payload(object or File)
-
-```
-const ownedData = await hp.sharedData().viewByID({id})
-```
-
-* [viewByCID](https://github.com/hashed-io/hashed-private-client-api/blob/5511ff36594bda72a17a4361524bd5dff66b52df/src/model/OwnedData.js#L199): View a stored payload by shared data cid, returns the deciphered payload(object or File)
-
-```
-const ownedData = await hp.sharedData().viewByCID({id})
 ```
