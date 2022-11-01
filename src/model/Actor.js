@@ -156,7 +156,7 @@ class Actor extends BaseGQLModel {
     } else if (address) {
       return this.getByAddress(address)
     } else {
-      throw new Error('An actor id or address has to be provided to for the actor to retrieve')
+      throw new Error('An actor id or address has to be provided for the actor to retrieve')
     }
   }
 
