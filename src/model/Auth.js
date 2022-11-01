@@ -34,6 +34,14 @@ const LOGIN = gql`
   }
 `
 
+const REFRESH_TOKEN = gql`
+  query refresh_token {
+    refresh_token{
+      token
+    }
+  }
+`
+
 class Auth extends BaseGQLModel {
   constructor () {
     super({ gql: null })
@@ -84,6 +92,13 @@ class Auth extends BaseGQLModel {
     this._context.token = token
     this._setUserInfo(user)
     this._createCipher(user)
+  }
+
+  async refreshToken () {
+    const { refresh_token: { token } } = await this.query({
+      query: REFRESH_TOKEN
+    })
+    console.log('refreshed token: ', token)
   }
 
   async userInfo () {
