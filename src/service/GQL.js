@@ -10,7 +10,8 @@ class GQL {
     links = links || []
     links = Array.isArray(links) ? links : [links]
     links.push(new HttpLink({
-      uri
+      uri,
+      credentials: 'include'
     }))
     this.client = new ApolloClient({
       link: from(links),
