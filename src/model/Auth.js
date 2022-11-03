@@ -1,7 +1,7 @@
 const {
   gql
 } = require('@apollo/client/core')
-const jwtDecode = require('jwt-decode')
+const jwtDecode = require('jwt-decode').default
 const BaseGQLModel = require('./BaseGQLModel')
 const Cipher = require('./Cipher')
 const { LocalStorageKey } = require('../const')
