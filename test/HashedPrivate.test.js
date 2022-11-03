@@ -143,7 +143,7 @@ describe('Group tests', () => {
 describe('HashedPrivate Integration Tests', () => {
   test('Should not be able to work with document object if not logged in', async () => {
     expect.assertions(9)
-    expect(hp.isLoggedIn()).toBe(false)
+    expect(await hp.isLoggedIn()).toBe(false)
     try {
       await hp.document().store(getBaseData(1))
     } catch (err) {
@@ -156,10 +156,10 @@ describe('HashedPrivate Integration Tests', () => {
       expect(err.message).toContain('No user is logged in')
     }
     await hp.login(keyPair1.address)
-    expect(hp.isLoggedIn()).toBe(true)
+    expect(await hp.isLoggedIn()).toBe(true)
     const document = hp.document()
     await hp.logout()
-    expect(hp.isLoggedIn()).toBe(false)
+    expect(await hp.isLoggedIn()).toBe(false)
     try {
       await hp.document().store(getBaseData(1))
     } catch (err) {
@@ -180,20 +180,20 @@ describe('HashedPrivate Integration Tests', () => {
   })
 
   test('New user login', async () => {
-    expect(hp.isLoggedIn()).toBe(false)
+    expect(await hp.isLoggedIn()).toBe(false)
     await hp.login(keyPairNewUser.address)
-    expect(hp.isLoggedIn()).toBe(true)
+    expect(await hp.isLoggedIn()).toBe(true)
   })
 
   test('Test session persistence', async () => {
-    expect(hp.isLoggedIn()).toBe(false)
+    expect(await hp.isLoggedIn()).toBe(false)
     await hp.login(keyPairNewUser.address)
-    expect(hp.isLoggedIn()).toBe(true)
+    expect(await hp.isLoggedIn()).toBe(true)
     const newHP = newHashedPrivateInstance()
-    expect(newHP.isLoggedIn()).toBe(true)
+    expect(await newHP.isLoggedIn()).toBe(true)
     await hp.logout()
     const newHP2 = newHashedPrivateInstance()
-    expect(newHP2.isLoggedIn()).toBe(false)
+    expect(await newHP2.isLoggedIn()).toBe(false)
   })
 
   test('Cipher and view own document', async () => {
@@ -752,14 +752,14 @@ async function setupOwnDocument (num, userKP = null, ownerActorId = null) {
 }
 
 async function login (address) {
-  expect(hp.isLoggedIn()).toBe(false)
+  expect(await hp.isLoggedIn()).toBe(false)
   await hp.login(address)
-  expect(hp.isLoggedIn()).toBe(true)
+  expect(await hp.isLoggedIn()).toBe(true)
 }
 
 async function logout () {
   await hp.logout()
-  expect(hp.isLoggedIn()).toBe(false)
+  expect(await hp.isLoggedIn()).toBe(false)
 }
 
 async function addUser () {

@@ -33,7 +33,8 @@ class HashedPrivate {
     this._auth = new Auth()
     const gql = new GQL({
       uri: privateURI,
-      links: new AuthLink({ auth: this._auth })
+      links: new AuthLink({ auth: this._auth }),
+      auth: this._auth
     })
     this._actor = new Actor({ gql })
     const user = new User({ gql })
@@ -83,7 +84,7 @@ class HashedPrivate {
    *
    * @return {boolean} whether the user is logged in
    */
-  isLoggedIn () {
+  async isLoggedIn () {
     return this._auth.isLoggedIn()
   }
 
@@ -93,7 +94,7 @@ class HashedPrivate {
    * @return {Object} document object @see Document
    */
   document () {
-    this._auth.assertIsLoggedIn()
+    this._auth.assertHasLocalToken()
     return this._document
   }
 
@@ -103,7 +104,7 @@ class HashedPrivate {
    * @return {Object} group object @see Group
    */
   group () {
-    this._auth.assertIsLoggedIn()
+    this._auth.assertHasLocalToken()
     return this._group
   }
 
@@ -113,7 +114,7 @@ class HashedPrivate {
    * @return {Object} group object @see GGL
    */
   gql () {
-    this._auth.assertIsLoggedIn()
+    this._auth.assertHasLocalToken()
     return this._gql
   }
 }

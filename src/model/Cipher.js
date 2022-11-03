@@ -84,7 +84,7 @@ class Cipher {
   }
 
   async _getCipher (actorId) {
-    this._auth.assertIsLoggedIn()
+    await this._auth.assertIsLoggedIn()
     if (!actorId) {
       return this._defaultCipher
     }
@@ -96,7 +96,7 @@ class Cipher {
   }
 
   async _addCiphers (actorIds) {
-    this._auth.assertIsLoggedIn()
+    await this._auth.assertIsLoggedIn()
     actorIds = Array.isArray(actorIds) ? actorIds : [actorIds]
     for (const actorId of actorIds) {
       if (this.hasCipher(actorId)) {

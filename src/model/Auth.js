@@ -22,7 +22,6 @@ const LOGIN = gql`
       address: $address,
       signature: $signature
     }){
-      refresh_token
       token
       user{
         address
@@ -56,7 +55,7 @@ class Auth extends BaseGQLModel {
   }
 
   async login (address) {
-    if (this.isLoggedIn()) {
+    if (await this.isLoggedIn()) {
       await this.logout()
     }
     const { generate_login_challenge: { message } } = await this.mutate({
@@ -94,13 +93,6 @@ class Auth extends BaseGQLModel {
     this._createCipher(user)
   }
 
-  async refreshToken () {
-    const { refresh_token: { token } } = await this.query({
-      query: REFRESH_TOKEN
-    })
-    console.log('refreshed token: ', token)
-  }
-
   async userInfo () {
     await this._assureIsInitialized()
     return this._context.userInfo
@@ -118,37 +110,72 @@ class Auth extends BaseGQLModel {
     this.emit('logout')
   }
 
-  isLoggedIn () {
-    return !!this._getToken()
+  async isLoggedIn () {
+    return !!await this._getToken()
   }
 
-  assertIsLoggedIn () {
-    if (!this.isLoggedIn()) {
+  async assertIsLoggedIn () {
+    if (!await this.isLoggedIn()) {
       throw new Error('No user is logged in')
     }
   }
 
-  getToken () {
-    this.assertIsLoggedIn()
+  assertHasLocalToken () {
+    if (!this.hasLocalToken()) {
+      throw new Error('No user is logged in')
+    }
+  }
+
+  async getToken () {
+    await this.assertIsLoggedIn()
     return this._getToken()
   }
 
-  _getToken () {
+  async _getToken () {
+    if (!this.hasLocalToken()) {
+      return null
+    }
+    if (hasTokenExpired(this._context.token)) {
+      const token = await this._refreshToken()
+      if (!token) {
+        await this.logout()
+      }
+      this._context.token = token
+    }
+    return this._context.token
+  }
+
+  hasLocalToken () {
+    return !!this.getLocalToken()
+  }
+
+  getLocalToken () {
     if (!this._context.token) {
       this._context.token = localStorage.getItem(LocalStorageKey.JWT)
     }
     return this._context.token
   }
 
-  _getUserId () {
-    const { sub } = jwtDecode(this.getToken())
+  async _refreshToken () {
+    try {
+      const { refresh_token: { token } } = await this.query({
+        query: REFRESH_TOKEN
+      }, 0)
+      return token
+    } catch (error) {
+      return null
+    }
+  }
+
+  async _getUserId () {
+    const { sub } = jwtDecode(await this.getToken())
     return sub
   }
 
   async _assureIsInitialized () {
-    this.assertIsLoggedIn()
+    await this.assertIsLoggedIn()
     if (!this._context.userInfo) {
-      const user = await this._user.getFullById(this._getUserId())
+      const user = await this._user.getFullById(await this._getUserId())
       this._setUserInfo(user)
       this._createCipher(user)
     }
@@ -179,4 +206,9 @@ module.exports = Auth
 
 function isString (val) {
   return Object.prototype.toString.call(val) === '[object String]'
+}
+
+function hasTokenExpired (token) {
+  const { exp } = jwtDecode(token)
+  return new Date(exp * 1000 - (5 * 60 * 1000)) <= new Date()
 }
