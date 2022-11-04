@@ -158,6 +158,9 @@ class Auth extends BaseGQLModel {
 
   async _refreshToken () {
     try {
+      // Clear current token because if it has expired the request
+      // will be rejected
+      this._context.token = null
       const { refresh_token: { token } } = await this.mutate({
         mutation: REFRESH_TOKEN
       }, null, 0)
