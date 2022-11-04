@@ -75,7 +75,7 @@ class Auth extends BaseGQLModel {
         signature
       }
     })
-    localStorage.setItem(LocalStorageKey.JWT, token)
+    this._storeToken(token)
     if (!user.publicKey) {
       const {
         publicKey,
@@ -87,8 +87,7 @@ class Auth extends BaseGQLModel {
         securityData
       })
     }
-    // console.log('token: ', token)
-    this._context.token = token
+    console.log('token: ', this._context.token)
     this._setUserInfo(user)
     this._createCipher(user)
   }
@@ -105,7 +104,7 @@ class Auth extends BaseGQLModel {
 
   async logout () {
     this._context = {}
-    localStorage.removeItem(LocalStorageKey.JWT)
+    this._clearLocalToken()
     await this._gql.clearStore()
     this.emit('logout')
   }
@@ -140,7 +139,7 @@ class Auth extends BaseGQLModel {
       if (!token) {
         await this.logout()
       }
-      this._context.token = token
+      this._storeToken(token)
     }
     return this._context.token
   }
@@ -160,7 +159,7 @@ class Auth extends BaseGQLModel {
     try {
       // Clear current token because if it has expired the request
       // will be rejected
-      this._context.token = null
+      this._clearLocalToken()
       const { refresh_token: { token } } = await this.mutate({
         mutation: REFRESH_TOKEN
       }, null, 0)
@@ -168,6 +167,16 @@ class Auth extends BaseGQLModel {
     } catch (error) {
       return null
     }
+  }
+
+  _clearLocalToken () {
+    this._context.token = null
+    localStorage.removeItem(LocalStorageKey.JWT)
+  }
+
+  _storeToken (token) {
+    this._context.token = token
+    localStorage.setItem(LocalStorageKey.JWT, token)
   }
 
   async _getUserId () {
