@@ -34,7 +34,7 @@ const LOGIN = gql`
 `
 
 const REFRESH_TOKEN = gql`
-  query refresh_token {
+  mutation refresh_token {
     refresh_token{
       token
     }
@@ -158,8 +158,8 @@ class Auth extends BaseGQLModel {
 
   async _refreshToken () {
     try {
-      const { refresh_token: { token } } = await this.query({
-        query: REFRESH_TOKEN
+      const { refresh_token: { token } } = await this.mutate({
+        mutation: REFRESH_TOKEN
       }, 0)
       return token
     } catch (error) {
