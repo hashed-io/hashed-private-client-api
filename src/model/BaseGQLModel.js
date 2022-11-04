@@ -7,15 +7,12 @@ class BaseGQLModel extends EventEmitter {
   }
 
   async query (opts, retries = 1) {
-    return this._request('query', opts, null, retries)
+    const { data } = await this._gql.query(opts, retries)
+    return data
   }
 
   async mutate (opts, config, retries = 1) {
-    return this._request('mutate', opts, config)
-  }
-
-  async _request (operation, opts, config, retries = 1) {
-    const { data } = await this._gql[operation](opts, config, retries)
+    const { data } = await this._gql.mutate(opts, config, retries)
     return data
   }
 }
