@@ -138,8 +138,9 @@ class Auth extends BaseGQLModel {
       const token = await this._refreshToken()
       if (!token) {
         await this.logout()
+      } else {
+        this._storeToken(token)
       }
-      this._storeToken(token)
     }
     return this._context.token
   }
