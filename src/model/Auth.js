@@ -160,7 +160,7 @@ class Auth extends BaseGQLModel {
     try {
       const { refresh_token: { token } } = await this.mutate({
         mutation: REFRESH_TOKEN
-      }, 0)
+      }, null, 0)
       return token
     } catch (error) {
       return null
