@@ -59,7 +59,9 @@ class HashedPrivate {
    * @throws error in case the login fails
    */
   async login (address) {
-    await this._auth.login(address)
+    if (!await this._auth.isAddressLoggedIn(address)) {
+      await this._auth.login(address)
+    }
 
     this._document = new Document({
       actor: this._actor,

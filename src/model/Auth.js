@@ -113,6 +113,15 @@ class Auth extends BaseGQLModel {
     return !!await this._getToken()
   }
 
+  async isAddressLoggedIn (address) {
+    const isLoggedIn = await this.isLoggedIn()
+    if (isLoggedIn) {
+      const user = await this.userInfo()
+      return address === user.address
+    }
+    return false
+  }
+
   async assertIsLoggedIn () {
     if (!await this.isLoggedIn()) {
       throw new Error('No user is logged in')
