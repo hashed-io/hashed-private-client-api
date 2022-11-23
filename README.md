@@ -1,4 +1,18 @@
-**Hashed Private Client API**
+# Hashed Private Client API
+
+- [Hashed Private Client API](#hashed-private-client-api)
+  - [Requirements](#requirements)
+  - [How to use](#how-to-use)
+  - [Services](#services)
+    - [Document services](#document-services)
+    - [Group services](#group-services)
+  - [Testing](#testing)
+
+## Requirements
+
+Requires NodeJS 16
+
+## How to use
 
 Enables the usage of the Hashed Private backend services by client applications.
 
@@ -32,7 +46,9 @@ Then the user has to be logged in into the hashed private server:
 
 Once logged in the services provided by the [Document](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L83) and [Group](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L67) objects can be accessed.  
 
-**Document services**
+## Services
+
+### Document services
 
 * [store](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Document.js#L230): Store a personal private document in the hashed private service
 
@@ -86,7 +102,7 @@ const document = await hp.document().updateMetadata({
 await hp.document().delete(cid)
 ```
 
-**Group services**
+### Group services
 
 * [getById](https://github.com/hashed-io/hashed-private-client-api/blob/19bca988d6367649ef701a8107984db125af7bf4/src/model/Group.js#L143): Get the group details by id
 
@@ -118,3 +134,10 @@ await hp.group().deleteMember({
   groupId
 })
 ```
+
+
+## Testing
+
+To run tests, the backend server has to be run locally. The backend server repo is: https://github.com/hashed-io/hashed-private-server, please clone and follow the README instructions on how to run the server locally. Once the backend server is running, run:
+
+`npm test`
