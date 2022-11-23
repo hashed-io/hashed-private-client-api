@@ -58,7 +58,7 @@ class GQL {
   }
 
   _shouldRetry (error) {
-    console.log('In GQL should retry error: ', error.message)
+    // console.log('In GQL should retry error: ', error.message)
     return error.message.toLowerCase().includes('jwtexpired')
   }
 }
