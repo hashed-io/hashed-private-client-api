@@ -191,6 +191,8 @@ describe('HashedPrivate Integration Tests', () => {
     expect(await hp.isLoggedIn()).toBe(true)
     const newHP = newHashedPrivateInstance()
     expect(await newHP.isLoggedIn()).toBe(true)
+    await newHP.login(keyPairNewUser.address)
+    await setupOwnDocument(1, keyPairNewUser)
     await hp.logout()
     const newHP2 = newHashedPrivateInstance()
     expect(await newHP2.isLoggedIn()).toBe(false)
@@ -314,7 +316,7 @@ describe('HashedPrivate Integration Tests', () => {
   })
 
   test('Should fail for non owner trying to view document', async () => {
-    expect.assertions(13)
+    expect.assertions(11)
     const {
       document
     } = await setupOwnDocument(1)
@@ -329,7 +331,7 @@ describe('HashedPrivate Integration Tests', () => {
   })
 
   test('Should fail for non group member trying to view group owned document', async () => {
-    expect.assertions(13)
+    expect.assertions(11)
     const {
       admin1,
       group: {
@@ -361,7 +363,7 @@ describe('HashedPrivate Integration Tests', () => {
   })
 
   test('Should fail for non owner trying to delete document', async () => {
-    expect.assertions(14)
+    expect.assertions(12)
     let { document } = await setupOwnDocument(1)
     const { cid } = document
     document = await hp.document().findByCID(cid)
@@ -395,7 +397,7 @@ describe('HashedPrivate Integration Tests', () => {
   })
 
   test('Should fail for Non group admin trying to delete document', async () => {
-    expect.assertions(18)
+    expect.assertions(16)
     const {
       admin1,
       member1,
@@ -733,7 +735,7 @@ async function setupSharedDocument ({
 
 async function setupOwnDocument (num, userKP = null, ownerActorId = null) {
   userKP = userKP || keyPair1
-  await login(userKP.address)
+  await hp.login(userKP.address)
   const expectedDocument = getBaseData(num)
   if (ownerActorId) {
     expectedDocument.ownerActorId = ownerActorId
